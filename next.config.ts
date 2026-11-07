@@ -5,7 +5,7 @@ const config: NextConfig = {
   devIndicators: false,
   allowedDevOrigins: ["pistol.tamthai.de"],
   rewrites: () => [
-    { source: "/context", destination: "/context-demo/index.html" },
+    { source: "/context", destination: "/context-demo/records.html" },
     { source: "/context/autopilot", destination: "/context-demo/flow.html" },
     { source: "/context/issues", destination: "/context-demo/records.html" },
     { source: "/context/issues/new", destination: "/context-demo/records.html" },

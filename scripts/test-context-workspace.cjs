@@ -19,14 +19,26 @@ async function run() {
       await mkdir(screenshotDir, { recursive: true });
       await page.screenshot({ path: join(screenshotDir, `${name}.png`), fullPage: true });
     };
-    await page.goto(baseURL);
-    await page.waitForURL('**/context');
-    await page.getByRole('tab', { name: 'Issue lifecycle', exact: true }).click();
-    await page.waitForURL('**/context/issues');
-    await page.getByRole('heading', { name: 'All issues', exact: true }).waitFor();
-    await page.locator('.records-table').waitFor();
-    const initialCount = await page.locator('tbody tr').count();
+    await page.goto(`${baseURL}/context`);
+    await page.getByRole('heading', { name: 'Your issue workspace', exact: true }).waitFor();
+    await page.locator('.sidebar-issue').first().waitFor();
+    const initialCount = await page.locator('.sidebar-issue').count();
     assert.ok(initialCount >= 2);
+    assert.equal(await page.getByRole('tab').count(), 0);
+    assert.equal(await page.getByText('Founder overview', { exact: true }).count(), 0);
+    const stylesheets = await page.locator('link[rel=stylesheet]').evaluateAll(links => links.map(link => link.href));
+    const firstIssue = await page.locator('.sidebar-issue').nth(0).getAttribute('href');
+    const secondIssue = await page.locator('.sidebar-issue').nth(1).getAttribute('href');
+    await page.locator('.sidebar-issue').nth(0).click();
+    await page.locator('.records-workflow').waitFor();
+    assert.equal(await page.locator('.sidebar-issue[aria-current=page]').getAttribute('href'), firstIssue);
+    await page.locator(`.sidebar-issue[href="${secondIssue}"]`).click();
+    await page.locator('.records-workflow').waitFor();
+    assert.equal(await page.locator('.sidebar-issue[aria-current=page]').getAttribute('href'), secondIssue);
+    await page.goBack();
+    await page.locator('.records-workflow').waitFor();
+    assert.equal(await page.locator('.sidebar-issue[aria-current=page]').getAttribute('href'), firstIssue);
+    assert.deepEqual(await page.locator('link[rel=stylesheet]').evaluateAll(links => links.map(link => link.href)), stylesheets);
     await page.getByRole('link', { name: 'Submit issue', exact: true }).click();
     const title = `Browser issue ${Date.now()}`;
     const comment = 'Reproduced in staging. <img src=x onerror=alert(1)> token=COMMENT_CANARY';
@@ -34,6 +46,12 @@ async function run() {
     await page.getByLabel('Environment', { exact: true }).fill('staging');
     await page.getByLabel('Issue description', { exact: true }).fill('A valid PDF upload fails with an unsupported file type error.');
     await page.getByLabel('Comment', { exact: false }).fill(comment);
+    await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+    await page.waitForFunction(() => !document.querySelector('#refresh-issues').disabled);
+    assert.equal(await page.getByLabel('Issue title', { exact: true }).inputValue(), title);
+    assert.equal(await page.getByLabel('Comment', { exact: false }).inputValue(), comment);
+    assert.equal(await page.locator('.sidebar-issue').count(), initialCount);
+    assert.deepEqual(await page.locator('link[rel=stylesheet]').evaluateAll(links => links.map(link => link.href)), stylesheets);
     await capture('01-submit-issue');
     const intakeKeys = [];
     await page.route('**/api/issues', async route => {
@@ -105,18 +123,35 @@ async function run() {
     await capture('03-recovery-confirmed');
     await page.reload();
     await page.locator('#phase-status').filter({ hasText: 'Recovery confirmed' }).waitFor();
-    await page.getByRole('link', { name: 'All issues', exact: true }).first().click();
-    await page.locator('.records-table').waitFor();
-    assert.equal(await page.locator('tbody tr').count(), initialCount + 1);
+    assert.equal(await page.locator('.sidebar-issue').count(), initialCount + 1);
     await page.getByLabel('Search issues', { exact: true }).fill(title);
-    assert.equal(await page.locator('tbody tr').count(), 1);
-    assert.match(await page.locator('tbody tr').innerText(), /resolved/);
-    await capture('04-all-issues');
+    assert.equal(await page.locator('.sidebar-issue').count(), 1);
+    assert.match(await page.locator('.sidebar-issue').innerText(), /resolved/);
+    assert.equal(await page.locator('.sidebar-issue').getAttribute('aria-current'), 'page');
+    await capture('04-sidebar-selection');
+    for (const width of [1440, 1180, 768, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `No horizontal overflow at ${width}px`);
+    }
     assert.equal(await page.getByRole('button', { name: 'Sign out', exact: true }).count(), 0);
     assert.equal((await context.request.get(`${baseURL}/api/issues?issue=${issueId}`)).status(), 200);
-    assert.equal((await context.request.get(`${baseURL}/issues`, { maxRedirects: 0 })).status(), 200);
+    for (const path of ['/demo', '/inbox', '/issues']) {
+      const response = await context.request.get(`${baseURL}${path}`, { maxRedirects: 0 });
+      assert.equal(response.status(), 307);
+      assert.equal(response.headers().location, '/context/issues');
+    }
+    const legacyIssue = await context.request.get(`${baseURL}/issues?issue=${issueId}`, { maxRedirects: 0 });
+    assert.equal(legacyIssue.headers().location, `/context/issues/${issueId}`);
+    for (const file of ['index.html', 'app.js', 'demo-engine.js']) assert.equal((await context.request.get(`${baseURL}/context-demo/${file}`)).status(), 404);
+    await page.goto(`${baseURL}/context?demo=1`);
+    await page.getByRole('heading', { name: 'Your issue workspace', exact: true }).waitFor();
+    assert.equal(await page.getByRole('tab').count(), 0);
+    await page.route('**/api/issues', route => route.fulfill({ json: { issues: [] } }));
+    await page.reload();
+    await page.getByText('No issues yet. Submit your first issue to start its lifecycle.', { exact: true }).waitFor();
+    await page.getByRole('link', { name: 'Submit issue', exact: true }).waitFor();
     assert.deepEqual(errors, []);
-    console.log('Context workspace passed: main route, password-free access, saved comment, database list, automatic lifecycle, human gates, persistence, and safe rendering.');
+    console.log('Context workspace passed: persistent sidebar, selection/back navigation, consistent styles, retired demo routes, password-free access, saved comment, automatic lifecycle, human gates, persistence, empty state, and safe rendering.');
   } finally { await browser.close(); }
 }
 run().catch(error => { console.error(error); process.exitCode = 1; });

@@ -1,8 +1,6 @@
-import IssueWorkspace from "@/components/issue-workspace";
-import "../issues.css";
+import { redirect } from "next/navigation";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-export default function IssuesPage() {
-  return <IssueWorkspace />;
+export default async function IssuesPage({ searchParams }: { searchParams: Promise<{ issue?: string | string[] }> }) {
+  const { issue } = await searchParams;
+  redirect(typeof issue === "string" && issue ? `/context/issues/${encodeURIComponent(issue)}` : "/context/issues");
 }

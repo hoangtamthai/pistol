@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Submit customer issues, review saved records, and follow their evidence-backed lifecycle.">
+  <meta name="description" content="Customer issues and their evidence-backed lifecycle in one workspace.">
   <title>Issues · Context</title>
-  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/icon.svg?v=context-blue" type="image/svg+xml">
   <link rel="stylesheet" href="/context-demo/styles.css">
   <link rel="stylesheet" href="/context-demo/records.css">
   <script src="/context-demo/records.js" type="module"></script>
@@ -13,13 +13,25 @@
 <body class="records-page">
   <a class="records-skip" href="#records-main">Skip to content</a>
   <header class="app-header">
-    <a class="brand" href="/context" aria-label="Context home"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>context<span class="brand-divider"></span><span class="brand-caption">Customer operations</span></a>
-    <nav class="records-nav" aria-label="Workspace"><a href="/context">Founder overview</a><a href="/context/issues" id="issues-link">All issues</a><a href="/context/issues/new" id="new-link" class="button-primary">Submit issue</a></nav>
+    <a class="brand" href="/context/issues" aria-label="Context workspace"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>context<span class="brand-divider"></span><span class="brand-caption">Customer operations</span></a>
+    <nav class="records-nav" aria-label="Workspace"><span class="workspace-label">Issue workspace</span><a href="/context/autopilot">Autopilot flow</a></nav>
   </header>
-  <main class="records-main" id="records-main" tabindex="-1">
-    <div id="request-error" class="records-error" role="alert" hidden><span></span><button type="button" class="button-secondary" id="retry">Retry</button><a href="/context/issues">Back to all issues</a></div>
-    <div id="content" aria-busy="true"></div>
-  </main>
+  <div class="records-shell">
+    <aside class="records-sidebar" aria-label="Issue sidebar">
+      <div class="sidebar-heading"><h2>Issues</h2><button type="button" class="button-secondary" id="refresh-issues">Refresh</button></div>
+      <a href="/context/issues/new" id="new-link" class="button-primary">Submit issue</a>
+      <label class="sidebar-search">Search issues<input id="search" type="search" placeholder="Title, owner, status, or ID"></label>
+      <p id="issue-count" class="records-form-note" role="status">Loading issues…</p>
+      <nav aria-label="Saved issues" id="issue-list" aria-busy="true"></nav>
+      <p class="sidebar-note">Saved in this workspace. Select an issue to follow its lifecycle.</p>
+    </aside>
+    <main class="records-main" id="records-main" tabindex="-1">
+      <div class="records-heading"><div><p class="eyebrow">CUSTOMER → ENGINEERING → CUSTOMER</p><h1 id="page-title">Loading workspace…</h1><p id="page-description">Reading saved issue records.</p></div><span class="phase-status" id="phase-status">Loading</span></div>
+      <p class="records-notice">Password-free workspace. Anyone with access can view and edit issues. Use sanitized test data. Investigation is operator-supplied; deployments and customer outcomes are recorded simulations.</p>
+      <div id="request-error" class="records-error" role="alert" hidden><span></span><button type="button" class="button-secondary" id="retry">Retry</button><a href="/context/issues">Back to issues</a></div>
+      <div id="content" aria-busy="true"></div>
+    </main>
+  </div>
   <dialog id="record-detail" aria-labelledby="detail-title"><div class="dialog-header"><h2 id="detail-title">Issue details</h2><button type="button" class="close-button" id="close-detail" aria-label="Close details">×</button></div><div id="detail-body"></div></dialog>
   <noscript><p class="records-notice">Enable JavaScript to load saved records and run the local workflow.</p></noscript>
 </body>
