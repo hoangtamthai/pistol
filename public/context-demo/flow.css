@@ -1,5 +1,30 @@
-/* Scenario 03: autopilot flow (simulated) */
-.scenario-tabs button.is-current{color:#215db8;background:#fff;box-shadow:0 1px 4px #1b325416}
+/* Scenario 03: autopilot flow (simulated).
+   Self-contained: the shared styles.css only covers the issue workspace, so the
+   page layout, playback dock and toast are defined here under .flow-page. */
+.flow-page{height:100vh;display:flex;flex-direction:column;overflow:hidden;min-width:1100px}
+.flow-page .app-header{flex-shrink:0}
+.flow-page .workspace{position:relative;flex:1;min-height:0;padding:24px 34px 118px;display:flex;flex-direction:column}
+.flow-page .workspace-heading{display:flex;justify-content:space-between;align-items:center;gap:24px;min-height:82px;flex-shrink:0;padding:0 8px 8px}
+.flow-page .workspace-heading h1{margin:0;font-size:28px;letter-spacing:-.6px}
+.flow-page .workspace-heading>div>p:last-child{font-size:13px;color:var(--muted);margin:7px 0 0}
+.flow-page .playback-dock{position:absolute;bottom:31px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:17px;background:#fff;border:1px solid #dae3ef;border-radius:12px;padding:12px 14px;box-shadow:0 7px 28px #1a34520b;min-height:67px;white-space:nowrap;z-index:2}
+.flow-page .reset-button{display:grid;place-items:center;background:transparent;color:#8393aa;border:0;border-radius:5px;width:29px;height:32px;padding:5px;font-size:16px;cursor:pointer}
+.flow-page .reset-button:hover{background:#f0f4fa;color:#526e94}
+.flow-page .dock-divider{width:1px;height:27px;background:#e3e9f1}
+.flow-page .step-info{min-width:200px}
+.flow-page .step-counter{display:block;font:8px var(--mono);color:#586a84;margin-bottom:5px}
+.flow-page .step-info strong{display:block;font-size:12px;font-weight:500;color:#425a79}
+.flow-page .step-progress{display:flex;gap:5px;align-items:center;padding:0 8px}
+.flow-page .step-dot{display:block;width:5px;height:5px;border-radius:50%;background:#dbe4f0}
+.flow-page .step-dot.current{background:#3679d8;width:17px;border-radius:5px}
+.flow-page .step-dot.done{background:#93b4e1}
+.flow-page .primary-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;background:#276bd1;border:1px solid #276bd1;color:#fff;min-height:36px;padding:8px 14px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer}
+.flow-page .primary-button:hover{background:#1b5bb9;border-color:#1b5bb9}
+.flow-page .next-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #d6dfec;border-radius:6px;background:#fff;color:#627b9d;font-size:11px;padding:8px 12px;min-height:36px;cursor:pointer}
+.flow-page .next-button:hover{background:#f3f6fb;color:#3d5d87}
+.flow-page .workspace-footnote{position:absolute;left:36px;right:36px;bottom:8px;display:flex;justify-content:space-between;gap:20px;font-size:9px;color:#586a84}
+.flow-page .toast{position:fixed;bottom:113px;left:50%;transform:translateX(-50%);z-index:20;border:1px solid #d0def1;background:#fff;box-shadow:0 7px 25px #23436b10;border-radius:7px;padding:12px 18px;max-width:620px;font-size:11px;color:#586a84}
+.flow-page .toast[hidden]{display:none}
 .flow-workspace{padding-bottom:118px}
 .flow-stage{flex:1;min-height:0;overflow:auto;padding:4px 8px 16px;margin-top:4px}
 .flow-stage .source-mark.sm{width:18px;height:18px;border-radius:4px;font-size:8px}
