@@ -6,4 +6,9 @@ const config: NextConfig = {
   rewrites: () => [{ source: "/context", destination: "/context-demo/index.html" }],
 };
 
+module.exports = {
+  allowedDevOrigins: ['pistol.tamthai.de'],
+}
+
+
 export default config;
