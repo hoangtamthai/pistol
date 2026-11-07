@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Relay · Customer signals, clear decisions",
-  description: "An evidence-backed decision workspace for customer and engineering teams. Hackathon demo with synthetic customer data.",
+  title: "Relay · Customer issue intelligence",
+  description: "An evidence-driven customer issue workspace with persistent triage, reviewed decisions, and account-specific recovery. Local MVP with labeled simulations.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

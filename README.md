@@ -1,87 +1,97 @@
 # Relay
 
-**Customer signals. Clear decisions. Closed loops.**
+Customer issue intelligence: preserve the report, review the evidence, coordinate engineering work, and verify each customer's recovery.
 
-A one-day hackathon MVP for CS leads and founders: one customer request becomes a source-backed decision brief, a reviewed reply, and separate release / notification / resolution states.
+The app now includes a **password-protected, single-workspace SQLite MVP** at `/issues`, based on [the customer issue specification](docs/customer-issue-intelligence-technical-spec.md). The original synthetic decision/voice demo remains at `/demo`, with its inbox at `/inbox`.
 
 ## Run
 
-Requires Node.js 20.9 or newer.
+Requires **Node.js 24+** for the built-in SQLite API. No database service or new package is needed.
 
 ```bash
 npm install
+cp .env.example .env.local
+# Edit .env.local: set RELAY_WORKSPACE_PASSWORD to a unique password of at least 16 characters.
 npm run dev
 ```
 
-Open http://127.0.0.1:3000. The whole guided workflow works without credentials. Use **Replay demo** to start at the incoming request.
+Open the address printed by Next.js, normally http://127.0.0.1:3000. The root opens `/issues`, which redirects to `/login` until signed in. There is no default password. Sessions expire after eight hours; changing the password revokes them. The original fictional demo is publicly readable, but funded voice sessions require workspace sign-in.
 
-**Signal inbox** is a dedicated page at `/inbox`: eight fictional Slack messages across Northstar, Meridian, Acme, Harbor, and Atlas. Search the original text or sender, filter by customer and review status, and inspect complete source messages. The five audit-export signals link to DEC-014; webhook, invoice, and SSO questions remain separate. Marking a message reviewed is a local triage state, not customer notification or resolution. Switching workspace views preserves the current draft and voice session; refreshing resets session state.
+SQLite defaults to `data/relay.sqlite`. Set `RELAY_DB_PATH` to change it. Reports, revisions, reviews, evidence, proposals, simulated Jira mappings, scenarios, account outcomes, completed intake jobs, and audit events survive browser and server restarts. The database and sidecar files are ignored by Git; the database file is owner-readable/writable only.
 
 ```bash
 npm test
-npm run typecheck
+npx tsc --noEmit --noUnusedLocals --noUnusedParameters
 npm run build
 npm start
 ```
 
-## Enable ElevenLabs
+## Durable workflow
 
-1. Follow [docs/elevenlabs.md](docs/elevenlabs.md) to create a private agent, paste its prompt, and configure five client tools.
-2. Copy `.env.example` to `.env.local`, then fill in `ELEVENLABS_API_KEY` and `ELEVENLABS_AGENT_ID`.
-3. Restart the app. Click **Talk to Relay**, grant microphone access, and ask a question.
+1. **Triage:** two seeded canonical issues and cross-channel report fixtures. Search by title, owner, or lifecycle state; queue ordering is severity-first. Associated ARR uses a union of verified account IDs, never message counts.
+2. **Report intake:** submit sanitized test text through the authenticated form. Source + external ID + revision deduplicates delivery. New source revisions preserve earlier wording. Received time is recorded; occurrence time is not invented. Public sources remain unverified and cannot be mapped to an account in this MVP.
+3. **Context:** review original reports and up to three clarification templates. Record customer answers/corrections. New manually submitted reports have no telemetry; the UI says so. Identity mapping requires an explicit operator verification basis against the local fixture account register.
+4. **Relationships:** same-environment keyword matches are proposals only. Inspect evidence, confirm/reject/abstain, or undo a review. A reviewed candidate cause is still a hypothesis, not confirmed causation. A relationship map and equivalent list expose the same records.
+5. **Investigation:** the export fixture includes a labeled event timeline, repository/deployment example, candidate commit, excluded undeployed commit, counterevidence, ownership basis, and proposed tests. No actual repository was analyzed or tested.
+6. **Decision:** compare clarify/workaround/fix/defer options. Save deterministic capacity/cost scenarios with explicit inputs, incident reserve, weekday calendar, and baseline milestone displacement. Unknown rates produce unknown cost, not invented values. No roadmap writes.
+7. **Jira simulation:** save and approve an immutable payload, then simulate create/link. Existing issue mappings are reused. Simulated Jira Done does not imply deployment or recovery.
+8. **Follow-up:** a simulated deployment creates verification tasks, including reviewed downstream symptoms. Draft a customer-safe message for a verified fixture contact, approve its exact version, optionally preview audio, then simulate delivery. Each account's recovery is recorded separately with evidence; a “persists” answer reopens the case.
 
-The backend exchanges the server-side API key for a WebRTC conversation token. The browser never receives the API key. Use headphones in a shared room. When voice is connected, typed questions join the live conversation; otherwise typed answers are explicitly scripted, not generated by an AI model.
+Mutations use optimistic case revisions and idempotency keys inside SQLite transactions. Reusing a key with a different payload fails. A changed message for the same recipient invalidates its previous pending version. **Any case mutation conservatively invalidates all pending workspace approvals**, including approved ones; immutable completed simulation records remain history. Approval and execution recheck case revision. No external send is implemented.
 
-## Three-minute demo
+## ElevenLabs
 
-- **0:00–0:25:** Replay demo. Show Alex’s request: exports truncate at 10,000 events, preventing a security review. Click **Build the decision brief**. Matching uses seeded problem tags, not a real import.
-- **0:25–0:55:** Three unique accounts, five messages, $148k associated ARR. Ask “What revenue is at risk?” Open Northstar’s explicit renewal-blocker evidence. There is no claimed churn probability or quantified loss.
-- **0:55–1:35:** Ask “What would slip if we prioritize the permanent fix?” Compare the assisted-export workaround with 3–5 engineering person-days. Show the planning assumptions and SSO displacement.
-- **1:35–2:10:** Open **Customer reply**. Edit or switch the template language, then approve the draft. Nothing is sent; edits invalidate approval.
-- **2:10–2:45:** Open **Follow-through** and simulate an ENG-214 release. Three follow-up drafts appear. Review one and record a demo notification. Customer confirmation is still separate.
-- **2:45–3:00:** “Relay closes the gap between a customer problem and a confirmed outcome, without making unsupported promises.”
+### Approved message audio preview
 
-## What is real vs simulated
+Set server-side `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`, then restart. In **Follow-up**, save and approve a message, explicitly consent to provider processing, and click **Generate ElevenLabs audio preview** before simulating delivery.
 
-| Capability | Implementation |
-| --- | --- |
-| Decision workspace, sources, option selection | Working UI using synthetic data |
-| Signal inbox (`/inbox`) | Eight searchable/filterable messages across five customers, original-message detail, local review state, and links to the existing decision |
-| Related-request matching | Deterministic filtering on seeded problem tags |
-| Account deduplication and associated ARR | Computed from the matching account IDs |
-| Timeline and milestone displacement | Business-day calculation from explicit fixture assumptions |
-| Drafts and review state | Editable English/German templates; approval resets on edits, language, or option changes |
-| Release / notification / resolution | Independent, gated, session-only demo events |
-| Live voice | ElevenLabs React SDK, private-agent WebRTC token, screen context, five UI client tools |
-| Offline assistant | Scripted answers for the supplied audit-export scenario |
-| Slack and Linear | Simulated; no external reads or writes |
-| Customer messaging, roadmap changes | Never performed |
+Only that approved message text is sent, not the full case, commercial register, or repository fixture. The server checks approval again after generation and discards stale results. Preview requests have a 30-second timeout, an 8 MB response limit, and a durable limit of 10 attempts per UTC day. Failures may consume provider credits; retries are never automatic. Audio remains in browser memory, not persisted storage. No phone call is placed.
 
-**The scenario snapshot is April 14, 2026.** It does not use the current date. All names, values, conversations, and dates are fictional. Internal planning windows are estimates, not promises. The calendar models Monday–Friday and no holidays. Dollars and maintenance costs are unknown; account ARR is not automatically revenue at risk. A simulated event does not count as a measured actual outcome.
+API contract: [ElevenLabs Create speech](https://elevenlabs.io/docs/api-reference/text-to-speech/convert), `POST /v1/text-to-speech/:voice_id`, MP3, `eleven_multilingual_v2`. Provider retention depends on the account; this app does not claim zero retention.
 
-## Data and security limits
+### Original live assistant
 
-- Guided mode does not invoke a model. Static synthetic data is bundled with the app. Session edits and outcomes are held in browser memory and reset on reload.
-- Live voice sends microphone audio, synthetic brief/source excerpts, and screen state to ElevenLabs and its configured LLM services. Retention and processing locations depend on provider/account settings. Local hosting does not mean local processing.
-- The app loads display fonts from Google Fonts. System fonts work if that request is blocked.
-- The voice endpoint checks same-origin requests, requests only the server-configured agent, has a 15-second upstream timeout, and limits token requests to six per minute per server process. This is not authentication or a production quota system.
-- Development and production scripts bind to loopback by default. **Do not expose this app publicly with a funded voice key or add real customer data without authentication, per-tenant authorization, durable audit history, request quotas, permission-aware retrieval, retention controls, and a review of provider data processing.**
-- No recording, model accuracy, multilingual speech quality, or real credentials have been verified by this repository’s automated tests.
+Follow [docs/elevenlabs.md](docs/elevenlabs.md), set `ELEVENLABS_AGENT_ID`, sign in to the workspace, and open `/demo`. The existing ElevenLabs conversation is scoped to the original synthetic brief, **not the SQLite case data**. Its scripted offline fallback requires no provider. The legacy demo's drafts and outcomes remain session-only and separate from the durable workspace.
 
-## Business hypothesis to test
+## API and storage
 
-Voice makes it easy to challenge the brief; it is not the defensible advantage. The hypothesis is that evidence-backed coordination and reliable follow-through save enough time to justify a recurring team subscription.
+- `POST /api/workspace/session`: password sign-in; HttpOnly, SameSite=Strict session cookie.
+- `DELETE /api/workspace/session`: clear the current browser session.
+- `GET /api/issues`: authenticated workspace snapshot, capped at 500 report revisions and the latest 100 audit events. No shared caching.
+- `POST /api/issues`: validated command, `Idempotency-Key` header required. Actions: `intake`, `context`, `map_account`, `relationship`, `state`, `scenario`, `proposal`, `approve`, `execute`, `work_done`, `deployment`, `outcome`. Case actions require `issueId` and `revision`.
+- `GET /api/jobs/:id`: authenticated durable intake receipt with the completed deterministic stage and explicit analysis limitations.
+- `POST /api/outreach/audio`: current approved proposal ID plus explicit provider consent.
 
-Interview founders / CS leads about their most recent escalation: Which tools were involved? Who chased the owner? What actually blocked renewal? How did they know the customer was unblocked? Measure coordination time, missed updates, and repeated requests. Offer a small paid pilot before building bespoke integrations. Do not claim retained revenue without observed evidence.
+The command API intentionally consolidates the spec's proposed endpoint list. Workspace and actor come from the authenticated local session; submitted `workspaceId` or `actor` fields are rejected. Mutations require exact same-origin requests. JSON bodies are capped at 20 KB. SQL statements are parameterized; domain changes and audit/idempotency records commit together.
 
-## Structure
+SQLite has separate entity tables storing versioned JSON records and a unique source revision index. Same-workspace relationships are checked by the application; this is not PostgreSQL row security or multi-tenant foreign-key isolation. Intake's small deterministic work completes synchronously and leaves a durable completed job receipt. **There is no asynchronous worker or external action outbox yet**, so no queued provider work or restart-retry guarantee is claimed.
 
-- `components/workspace.tsx`: shared navigation, decision, reply, evidence, approval, and follow-through UI.
-- `components/signal-inbox.tsx`: full-page multi-customer inbox, filters, source detail, and review controls.
-- `lib/inbox.ts`: inbox fixtures, customer/status filtering, and explicit decision associations.
-- `app/inbox/page.tsx` and `app/inbox.css`: inbox route and responsive inbox styles.
-- `components/voice-panel.tsx`: ElevenLabs session, transcript, UI tools, guided fallback.
-- `lib/demo.ts`: synthetic sources, matching, planning, templates, and gated outcome logic.
-- `lib/*.test.ts`: logic, provenance, and session-endpoint checks.
-- `app/api/voice/session/route.ts`: server-side ElevenLabs credential exchange.
-- `app/globals.css`: responsive workspace styles, keyboard focus, and reduced motion.
+Back up with a SQLite-aware backup tool, or stop the app cleanly before copying the database. Do not copy an active SQLite file without accounting for its WAL. Schema version 1 is initialized automatically; existing records are not reset on restart.
+
+## Boundaries before a pilot
+
+This implements a local MVP slice, **not all production requirements in the specification**:
+
+- One shared local operator password, not per-user roles, SSO, tenant isolation, or source-level permissions. Login throttling is per server process. Keep the default loopback binding; do not expose publicly.
+- Sanitized test data only. Text redaction handles common URL query/fragment, credential-header, and labeled secret patterns; it is not comprehensive DLP. Attachments, recording, input capture, arbitrary URL fetching, and telemetry collectors are deliberately unsupported.
+- No verified customer clarification links or identity provider. Responses are recorded by the authenticated operator. No automated context extraction, evaluated matching model, AI diagnostic pipeline, or arbitrary repository access.
+- No live Jira/CRM/helpdesk/Slack connector, webhook reconciliation, durable remote outbox, unknown-result recovery, scheduled public discovery, or phone delivery.
+- The small relationship map uses existing React/CSS, not React Flow. No arbitrary graph authoring, merge/split workflow, causal confirmation, or dependency scheduler. Reviewer undo preserves events.
+- Planning supports one sequential team with explicit capacity and reserved incident time. No holidays, parallel teams, uncertain dependency resolution, customer-deadline slack, or approved roadmap publication. Default estimates belong only to the seeded example; new issues require engineering estimates.
+- No deletion/revocation propagation, automated retention, encrypted-at-rest storage, permission-filtered retrieval, or production migrations. Protect the host and backups. Record and test these controls before real customer data.
+- The 500-report local snapshot is not a paginated large-dataset API. Increase scope only with query pagination and a durable processing design.
+
+## Validation
+
+Automated checks cover source replay and revision preservation, SQLite reopen, optimistic conflicts, immutable approval invalidation, account/ARR deduplication, different-environment abstention, public identity restrictions, redaction canaries, Jira mapping reuse, deployment-versus-recovery separation, downstream verification, reopened outcomes, capacity calculations, authentication, CSRF, bounded request parsing, and mocked ElevenLabs egress/stale-result handling.
+
+These are deterministic regression tests, not a model-accuracy evaluation or production security audit. Live credentials, real delivery, repository diagnosis accuracy, and customer outcomes are not validated by the tests.
+
+## Main files
+
+- `components/issue-workspace.tsx`, `app/issues.css`: persistent triage, case, relationship, decision, and follow-up views.
+- `lib/issues.ts`: DTOs, validation, redaction, account union, deterministic scenarios, customer-safe draft template.
+- `lib/case-store.ts`: SQLite transactions, fixtures, revision checks, approvals, audit trail, local simulation adapters.
+- `lib/workspace-auth.ts`: single-operator session, origin checks, bounded JSON parsing.
+- `app/api/issues/route.ts`, `app/api/outreach/audio/route.ts`: authenticated commands and optional approved audio.
+- `components/workspace.tsx`, `lib/demo.ts`: original synthetic demo, retained at `/demo`.
