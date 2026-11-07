@@ -125,7 +125,7 @@ export class CaseStore {
       const link = this.all<Relationship>("relationships").find(edge => edge.fromId === existing.id && edge.status === "confirmed");
       return { issueId: link!.toId, jobId: `job-${existing.id}` };
     }
-    if (this.all<Report>("reports").length >= 500) throw new CaseError("This local MVP is limited to 500 report revisions. Export and archive before expanding it.", 409);
+    if (this.all<Report>("reports").length >= 500) throw new CaseError("This workspace is limited to 500 report revisions. Export and archive before expanding it.", 409);
     const previous = this.all<Report>("reports").filter(report => report.source === source && report.externalId === externalId);
     const links = this.all<Relationship>("relationships").filter(edge => edge.type === "REPORTS" && edge.status === "confirmed" && previous.some(report => report.id === edge.fromId));
     let issue: Issue;
@@ -185,7 +185,7 @@ export class CaseStore {
       if (!links.some(edge => edge.toId === issue.id)) throw new CaseError("Report is not linked to this case.", 404);
       const account = this.get<Account>("accounts", text(body.accountId, "Verified account", 100));
       const basis = sanitize(text(body.basis, "Identity verification basis", 500));
-      if (report.source === "public_web") throw new CaseError("Public usernames cannot be mapped to customer accounts in this MVP.");
+      if (report.source === "public_web") throw new CaseError("Public usernames cannot be mapped to customer accounts in this workspace.");
       report.accountId = account.id;
       this.save("reports", report.id, report);
       for (const linkedId of new Set(links.map(link => link.toId))) if (linkedId !== issue.id) this.touch(this.get<Issue>("issues", linkedId));

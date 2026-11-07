@@ -2,6 +2,8 @@
 
 ## Fixes
 
+- Recheck HEAD before replaying session edits: a concurrent branch merge may have already restored the files, so stop rather than applying old replacements twice. (E)
+
 - After environment edits, Next dev may restart or recompile during a login probe; verify /login returns 200 and allow a 60-second timeout before testing authentication. (E)
 
 - Give shared command results an explicit optional jobId type; TypeScript otherwise collapses intake and case-action return inference to issueId alone. (E)
