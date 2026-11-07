@@ -14,6 +14,7 @@
 - GitHub CLI (gh) is not installed; use Git directly for remote inspection and pushes rather than assuming gh is available. (E)
 - GitHub HTTPS credentials are unavailable in this environment; verify SSH access rather than retrying non-interactive HTTPS pushes. (E)
 - SSH access to hoangtamthai/cursor-hackathon returned Repository not found; confirm the repository exists and the authenticated account has access before attempting a push. (E)
+- A direct git push retry also returned Repository not found despite successful SSH authentication as hoangtamthai; request the exact repository URL and verify access rather than repeating the same push. (E)
 
 <!-- BEGIN:nextjs-agent-rules -->
 
