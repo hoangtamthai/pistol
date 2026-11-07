@@ -1,4 +1,4 @@
-# Relay
+# Pistol
 
 Customer issue intelligence: preserve the report, review the evidence, coordinate engineering work, and verify each customer's recovery.
 
@@ -25,6 +25,12 @@ npx tsc --noEmit --noUnusedLocals --noUnusedParameters
 npm run build
 npm start
 ```
+
+## Context workflow demo
+
+Open `/context` for the two scenarios from `Context-UI-Handoff.zip`: **Founder overview** and **Issue lifecycle**. The supplied light desktop UI is served directly, without a React port or changes to `/demo`, `/inbox`, or `/issues`. No sign-in is needed; all records and external actions are simulated.
+
+Use **Restart this scenario** before presenting. Playback stops for independent approvals and again for explicit simulated customer confirmation. Progress and routing are local to each scenario and persist in this browser. See [presenter clicks](docs/context/Context-Demo-Flows.md), the [two-minute video guide](docs/context/Context-2-Minute-Video-Guide.md), and [validation instructions](docs/context/README.md).
 
 ## Durable workflow
 

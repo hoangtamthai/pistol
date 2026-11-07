@@ -1,5 +1,5 @@
 {
-  "name": "relay-decision-workspace",
+  "name": "pistol-decision-workspace",
   "version": "0.1.0",
   "private": true,
   "engines": { "node": ">=24.0.0" },
@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test lib/*.test.ts"
+    "test": "tsx --test lib/*.test.ts",
+    "test:context": "node scripts/test-context-demo.cjs"
   },
   "dependencies": {
     "@elevenlabs/react": "1.21.1",

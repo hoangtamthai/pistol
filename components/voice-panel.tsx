@@ -24,7 +24,7 @@ export default function VoicePanel({ actions, openSetup, context }: { actions: V
   const conversation = useConversation({
     micMuted: muted,
     onMessage: message => {
-      setTranscript(previous => [...previous.slice(-9), { role: message.source === "user" ? "You" : "Relay", text: message.message }]);
+      setTranscript(previous => [...previous.slice(-9), { role: message.source === "user" ? "You" : "Pistol", text: message.message }]);
       setExpanded(true);
     },
     onError: () => { setError("Voice connection interrupted. End the session and try again, or use the guided prompts."); setConnecting(false); },
@@ -101,7 +101,7 @@ export default function VoicePanel({ actions, openSetup, context }: { actions: V
   }
 
   return (
-    <section className="assistant-shell" aria-label="Relay assistant">
+    <section className="assistant-shell" aria-label="Pistol assistant">
       {expanded && <div className="assistant-popover">
         <div className="assistant-popover-head"><span><AudioLines size={16} /> {connected ? "Live conversation" : "Guided demo"}</span><button className="icon-button" aria-label="Close assistant transcript" onClick={() => setExpanded(false)}><X size={17} /></button></div>
         {connected ? <div className="transcript" role="log" aria-live="polite">{transcript.length ? transcript.map((message, index) => <p key={index}><strong>{message.role}</strong>{message.text}</p>) : <p>Connected. Ask about the evidence, options, or timeline.</p>}</div> : <>
@@ -112,9 +112,9 @@ export default function VoicePanel({ actions, openSetup, context }: { actions: V
       </div>}
       {error && <div className="voice-error" role="alert">{error}<button onClick={() => setError("")} aria-label="Dismiss voice error"><X size={14} /></button></div>}
       <div className="assistant-bar">
-        <button className={`assistant-identity ${connected ? "is-live" : ""}`} onClick={() => setExpanded(value => !value)} aria-expanded={expanded}><span className="assistant-symbol"><AudioLines size={21} /></span><span><strong>Ask Relay</strong><small>{connected ? (conversation.isSpeaking ? "Speaking" : muted ? "Microphone muted" : "Listening") : "A little clarity, on demand"}</small></span></button>
-        <form onSubmit={event => { event.preventDefault(); ask(query); }} className="assistant-input"><label className="sr-only" htmlFor="relay-question">Ask about this decision</label><input id="relay-question" maxLength={1000} value={query} onChange={event => setQuery(event.target.value)} placeholder={connected ? "Type into the live conversation…" : "What would slip if we prioritize this?"} /><button className="send-question" type="submit" disabled={!query.trim()} aria-label="Ask question"><ArrowUp size={17} /></button></form>
-        {connected ? <><button className="icon-button mute-button" onClick={() => setMuted(value => !value)} aria-label={muted ? "Unmute microphone" : "Mute microphone"}>{muted ? <MicOff size={18} /> : <Mic size={18} />}</button><button className="button voice-end" onClick={stopVoice}><Square size={12} fill="currentColor" /> End</button></> : <button className="button voice-button" disabled={busy} onClick={startVoice}>{busy ? <LoaderCircle size={16} className="spin" /> : <Mic size={16} />}{busy ? "Connecting…" : "Talk to Relay"}</button>}
+        <button className={`assistant-identity ${connected ? "is-live" : ""}`} onClick={() => setExpanded(value => !value)} aria-expanded={expanded}><span className="assistant-symbol"><AudioLines size={21} /></span><span><strong>Ask Pistol</strong><small>{connected ? (conversation.isSpeaking ? "Speaking" : muted ? "Microphone muted" : "Listening") : "A little clarity, on demand"}</small></span></button>
+        <form onSubmit={event => { event.preventDefault(); ask(query); }} className="assistant-input"><label className="sr-only" htmlFor="pistol-question">Ask about this decision</label><input id="pistol-question" maxLength={1000} value={query} onChange={event => setQuery(event.target.value)} placeholder={connected ? "Type into the live conversation…" : "What would slip if we prioritize this?"} /><button className="send-question" type="submit" disabled={!query.trim()} aria-label="Ask question"><ArrowUp size={17} /></button></form>
+        {connected ? <><button className="icon-button mute-button" onClick={() => setMuted(value => !value)} aria-label={muted ? "Unmute microphone" : "Mute microphone"}>{muted ? <MicOff size={18} /> : <Mic size={18} />}</button><button className="button voice-end" onClick={stopVoice}><Square size={12} fill="currentColor" /> End</button></> : <button className="button voice-button" disabled={busy} onClick={startVoice}>{busy ? <LoaderCircle size={16} className="spin" /> : <Mic size={16} />}{busy ? "Connecting…" : "Talk to Pistol"}</button>}
         <button className="icon-button voice-help" aria-label="Voice setup and data processing details" onClick={openSetup}><CircleHelp size={18} /></button>
       </div>
       <div className="assistant-disclosure"><span className={`status-dot ${connected ? "green" : ""}`} />{connected ? "ElevenLabs live · Audio & brief processed in the cloud" : configured ? "ElevenLabs ready · Voice sends audio & brief to the cloud" : "Guided demo · Connect ElevenLabs to enable live voice"}<span className="keyboard-hint">Human approval, always.</span></div>

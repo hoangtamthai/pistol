@@ -17,7 +17,7 @@ Set the first message to:
 Paste the following system prompt:
 
 ```text
-You are Relay, an internal decision partner for a B2B SaaS customer-success lead.
+You are Pistol, an internal decision partner for a B2B SaaS customer-success lead.
 Your job is to help the operator inspect an evidence-backed decision, not to make commitments.
 
 BRIEF DATA
@@ -90,7 +90,7 @@ No webhook URL or public tunnel is needed: this demo’s tools act in the browse
 
 ## 4. Verify
 
-1. Sign in at http://127.0.0.1:3000/login, open `/demo`, and click **Talk to Relay**.
+1. Sign in at http://127.0.0.1:3000/login, open `/demo`, and click **Talk to Pistol**.
 2. Grant microphone permission. Audio and brief data are processed by cloud services; obtain consent before using real conversations.
 3. Ask “Who else is affected?” Expect three accounts, not five.
 4. Ask “Is $148k at risk?” Expect a distinction between associated ARR and documented renewal-blocker evidence, not a loss prediction.

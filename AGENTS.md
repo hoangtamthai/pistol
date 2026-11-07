@@ -2,6 +2,9 @@
 
 ## Fixes
 
+- Wait for Next.js to report Ready before the first HTTP probe; launching it in the background does not mean the port is listening yet. (E)
+- Run Chromium and Firefox Context browser checks separately with a 180-second command timeout; combining both with the unit suite and strict TypeScript check can exceed 120 seconds. (E)
+
 - Recheck HEAD before replaying session edits: a concurrent branch merge may have already restored the files, so stop rather than applying old replacements twice. (E)
 
 - After environment edits, Next dev may restart or recompile during a login probe; verify /login returns 200 and allow a 60-second timeout before testing authentication. (E)
