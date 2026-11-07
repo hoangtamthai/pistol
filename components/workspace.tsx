@@ -96,7 +96,7 @@ export default function Workspace() {
     return () => { document.removeEventListener("keydown", handleEscape); previous?.focus(); };
   }, [mobileNav]);
 
-  function navigate(path: "/" | "/inbox", nextTab: Tab = "brief") {
+  function navigate(path: "/demo" | "/inbox", nextTab: Tab = "brief") {
     // Preserve the in-memory draft and voice session when switching workspace views.
     if (pathname !== path) window.history.pushState(null, "", path);
     setTab(nextTab);
@@ -106,7 +106,7 @@ export default function Workspace() {
   }
 
   function showDecision(nextTab: Tab = "brief") {
-    navigate("/", nextTab);
+    navigate("/demo", nextTab);
   }
 
   function chooseOption(next: Option) {
@@ -172,10 +172,11 @@ export default function Workspace() {
     <aside id="workspace-navigation" className={`sidebar ${mobileNav ? "sidebar-open" : ""}`} aria-label="Workspace navigation">
       <div className="sidebar-brand"><Brand /><span className="beta-label">BETA</span><button className="icon-button mobile-close" onClick={() => setMobileNav(false)} aria-label="Close navigation"><X size={18} /></button></div>
       <button className="workspace-switch" onClick={() => { setModal("setup"); setMobileNav(false); }}><span className="workspace-avatar">O</span><span>Orbit workspace<small>Customer operations</small></span><ChevronDown size={14} /></button>
-      <div className="sidebar-section-label">WORKSPACE</div>
+      <Link className="button" href="/issues">Open persistent issue workspace</Link>
+      <div className="sidebar-section-label">SYNTHETIC DEMO</div>
       <nav className="nav-list">
         <Link href="/inbox" className={isInbox ? "active" : ""} aria-current={isInbox ? "page" : undefined} onNavigate={event => { event.preventDefault(); navigate("/inbox"); }}><Inbox size={18} /><span>Signal inbox</span><span className="nav-count">{customerSignals.length}</span></Link>
-        <Link href="/" className={!isInbox && tab !== "followups" ? "active" : ""} onNavigate={event => { event.preventDefault(); showDecision(); }} aria-current={!isInbox && tab !== "followups" ? "page" : undefined}><Layers3 size={18} /><span>Decisions</span><span className="nav-count">1</span></Link>
+        <Link href="/demo" className={!isInbox && tab !== "followups" ? "active" : ""} onNavigate={event => { event.preventDefault(); showDecision(); }} aria-current={!isInbox && tab !== "followups" ? "page" : undefined}><Layers3 size={18} /><span>Decisions</span><span className="nav-count">1</span></Link>
         <button className={!isInbox && tab === "followups" ? "active" : ""} onClick={() => showDecision("followups")} aria-current={!isInbox && tab === "followups" ? "page" : undefined}><CheckCheck size={18} /><span>Follow-through</span><span className="nav-count">{accounts.length - resolvedCount}</span></button>
         <button onClick={() => { setModal("sources"); setMobileNav(false); }}><BookOpen size={18} /><span>Sources</span><span className="nav-count">{sources.length}</span></button>
       </nav>

@@ -4,4 +4,8 @@ node_modules/
 !.env.example
 *.tsbuildinfo
 coverage/
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
 .stfolder/

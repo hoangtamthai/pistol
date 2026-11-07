@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { NextRequest } from "next/server";
 import { GET, POST } from "../app/api/voice/session/route";
+import { createSession, SESSION_COOKIE } from "./workspace-auth";
 
 test("voice configuration exposes readiness, never server credentials", async () => {
   const originalKey = process.env.ELEVENLABS_API_KEY;
@@ -47,7 +48,9 @@ test("upstream tokens, errors, and rate limits are handled without leaking the k
   const originalKey = process.env.ELEVENLABS_API_KEY;
   const originalAgent = process.env.ELEVENLABS_AGENT_ID;
   const originalFetch = globalThis.fetch;
-  const request = () => new NextRequest("http://localhost:3000/api/voice/session", { method: "POST", headers: { origin: "http://localhost:3000" } });
+  const originalPassword = process.env.RELAY_WORKSPACE_PASSWORD;
+  process.env.RELAY_WORKSPACE_PASSWORD = "test-only-password-long-enough";
+  const request = () => new NextRequest("http://localhost:3000/api/voice/session", { method: "POST", headers: { origin: "http://localhost:3000", cookie: `${SESSION_COOKIE}=${createSession()}` } });
   try {
     process.env.ELEVENLABS_API_KEY = "private-test-key";
     process.env.ELEVENLABS_AGENT_ID = "agent_test";
@@ -75,6 +78,8 @@ test("upstream tokens, errors, and rate limits are handled without leaking the k
     assert.equal((await POST(request())).status, 429);
   } finally {
     globalThis.fetch = originalFetch;
+    if (originalPassword === undefined) delete process.env.RELAY_WORKSPACE_PASSWORD;
+    else process.env.RELAY_WORKSPACE_PASSWORD = originalPassword;
     if (originalKey === undefined) delete process.env.ELEVENLABS_API_KEY;
     else process.env.ELEVENLABS_API_KEY = originalKey;
     if (originalAgent === undefined) delete process.env.ELEVENLABS_AGENT_ID;

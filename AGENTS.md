@@ -2,6 +2,12 @@
 
 ## Fixes
 
+- After environment edits, Next dev may restart or recompile during a login probe; verify /login returns 200 and allow a 60-second timeout before testing authentication. (E)
+
+- Give shared command results an explicit optional jobId type; TypeScript otherwise collapses intake and case-action return inference to issueId alone. (E)
+
+- The SQLite case store uses shared DTO types selectively; remove unused type-only imports before running strict noUnusedLocals validation. (E)
+
 - Native history updates the URL before React renders the new workspace view; browser checks must wait for inbox content, not only waitForURL, before counting rows. (E)
 
 - Check for .git before running Git commands; this workspace was initialized on branch main during the hackathon. (E)

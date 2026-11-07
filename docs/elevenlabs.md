@@ -1,6 +1,8 @@
 # ElevenLabs setup
 
-The app uses **ElevenAgents** for speech recognition, conversational reasoning, speech output, and turn-taking. Do not add separate speech-to-text or text-to-speech endpoints for this MVP.
+The original `/demo` uses **ElevenAgents** for speech recognition, conversational reasoning, speech output, and turn-taking. It remains scoped to synthetic demo data, not the SQLite case workspace.
+
+The persistent `/issues` workspace separately supports approved-message audio previews through ElevenLabs Text to Speech. Set `ELEVENLABS_VOICE_ID`, approve an outreach draft, and explicitly consent to provider processing before previewing. This does not place a call or deliver a message; see [README.md](../README.md#elevenlabs) for limits.
 
 ## 1. Create an agent
 
@@ -68,6 +70,7 @@ cp .env.example .env.local
 Set:
 
 ```dotenv
+RELAY_WORKSPACE_PASSWORD=your_unique_password_at_least_16_characters
 ELEVENLABS_API_KEY=your_server_side_key
 ELEVENLABS_AGENT_ID=your_private_agent_id
 ```
@@ -87,7 +90,7 @@ No webhook URL or public tunnel is needed: this demo’s tools act in the browse
 
 ## 4. Verify
 
-1. Open http://127.0.0.1:3000 and click **Talk to Relay**.
+1. Sign in at http://127.0.0.1:3000/login, open `/demo`, and click **Talk to Relay**.
 2. Grant microphone permission. Audio and brief data are processed by cloud services; obtain consent before using real conversations.
 3. Ask “Who else is affected?” Expect three accounts, not five.
 4. Ask “Is $148k at risk?” Expect a distinction between associated ARR and documented renewal-blocker evidence, not a loss prediction.
@@ -105,7 +108,7 @@ Use the app’s mute and end controls. If microphone permission is denied or cre
 - **Unknown dynamic variable:** confirm `{{brief_context}}` and `{{screen_context}}` are present in the prompt; the browser supplies both when starting a session.
 - **Session error:** check the private-agent ID, key permissions, credits, and microphone access. Use the app through the same origin rather than calling the token endpoint cross-site.
 - **No voice button readiness after credentials:** restart the server and reload the page.
-- **Public deployment:** the demo is not authenticated. Do not expose a funded session endpoint without access controls, durable quotas, and tenant permissions.
+- **Public deployment:** the synthetic demo is publicly readable, but funded sessions require the local workspace cookie. This shared-password MVP is not production authentication. Keep it on loopback until per-user access controls, durable voice quotas, and tenant permissions are implemented.
 
 ## Primary documentation
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, requireSession } from "@/lib/workspace-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
   if (!configured()) {
     return NextResponse.json({ error: "Add ELEVENLABS_API_KEY and ELEVENLABS_AGENT_ID to .env.local, configure the agent using docs/elevenlabs.md, then restart the app." }, { status: 503 });
   }
+  try { requireSession(request); } catch (error) { return apiError(error); }
   const now = Date.now();
   sessionRequests = sessionRequests.filter(time => now - time < SESSION_WINDOW_MS);
   if (sessionRequests.length >= MAX_SESSIONS_PER_WINDOW) {
