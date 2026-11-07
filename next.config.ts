@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const config: NextConfig = {
   turbopack: { root: process.cwd() },
   devIndicators: false,
-  allowedDevOrigins: ["pistol.tamthai.de"],
+  allowedDevOrigins: ["context.tamthai.de"],
   rewrites: () => [
     { source: "/context", destination: "/context-demo/records.html" },
     { source: "/context/autopilot", destination: "/context-demo/flow.html" },

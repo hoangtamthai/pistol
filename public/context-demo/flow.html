@@ -10,19 +10,24 @@
   <link rel="stylesheet" href="/context-demo/styles.css">
   <link rel="stylesheet" href="/context-demo/records.css">
   <link rel="stylesheet" href="/context-demo/flow.css">
+  <script src="/context-demo/message.js" defer></script>
   <script src="/context-demo/flow.js" defer></script>
+  <script src="/context-demo/live.js" defer></script>
 </head>
-<body class="flow-page">
+<body class="flow-page mode-live">
   <header class="app-header">
     <a class="brand" href="/context/issues" aria-label="Context workspace"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>context<span class="brand-divider"></span><span class="brand-caption">Customer operations</span></a>
+    <div class="mode-switch" role="group" aria-label="View"><button type="button" data-mode="live" aria-pressed="true">Live board</button><button type="button" data-mode="steps" aria-pressed="false">Step by step</button></div>
     <nav class="records-nav" aria-label="Workspace"><a href="/context/issues">Issue workspace</a><a href="/context/autopilot" aria-current="page">Autopilot flow</a><a href="/context/issues/new" class="button-primary">Submit issue</a></nav>
   </header>
   <main class="workspace flow-workspace" id="flow-main">
+    <section class="live" id="live" aria-label="Live autopilot board"></section>
     <section class="workspace-heading"><div><p class="eyebrow" id="flow-eyebrow">SCENARIO 03 / AUTOPILOT</p><h1 id="flow-title">Loading tickets…</h1><p id="flow-subtitle">Reading connected sources.</p></div><span id="flow-status" class="phase-status">Ready to play</span></section>
     <section class="flow-stage" id="flow-stage" aria-live="polite"></section>
     <div class="playback-dock" aria-label="Demo playback"><button type="button" class="reset-button" id="flow-reset" aria-label="Restart this scenario" title="Restart this scenario">↺</button><div class="dock-divider"></div><div class="step-info"><span class="step-counter" id="flow-counter"></span><strong id="flow-step-title"></strong></div><div class="step-progress" id="flow-progress"></div><button type="button" class="next-button" id="flow-back">Back</button><button type="button" class="next-button" id="flow-next">Next</button><button type="button" class="primary-button" id="flow-play">Play demo</button></div>
     <div class="workspace-footnote"><span>Sample data · Simulated connectors and agents · No messages sent, tickets changed, or code deployed</span><a href="/context/issues">See pulled tickets in All issues ↗</a></div>
   </main>
+  <dialog id="live-thread" class="live-thread" aria-labelledby="lt-title"><div class="lt-header"><div><p class="eyebrow" id="lt-ref"></p><h2 id="lt-title"></h2></div><button type="button" class="lt-close" id="lt-close" aria-label="Close conversation">×</button></div><div id="lt-body"></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 </body>
 </html>

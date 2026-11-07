@@ -3,6 +3,12 @@
 export type AgentName = "Customer agent" | "Engineering agent" | "Billing agent";
 export type ResearchSource = "Logs" | "Docs" | "Code" | "Past tickets" | "Changelog" | "Account";
 export type Option = { title: string; effort: string; risk: "Low" | "Medium" | "High"; note: string };
+/**
+ * bug:      What happened → Why it happened (root cause) → What we changed → What you need to do
+ * question: You asked → The answer → What we did → What you need to do
+ */
+export type CustomerMessage = { kind: "bug" | "question"; summary: string; why: string; changed: string; youDo: string };
+
 export type Playbook = {
   cluster: string;
   agent: AgentName;
@@ -14,6 +20,10 @@ export type Playbook = {
   why: string;
   fix: { kind: "Pull request" | "Customer reply" | "Config change" | "Account handoff"; title: string; checks: string[] };
   closeout: string;
+  /** The update the agent sends the customer, in everyday words. No jargon, no delivery dates. */
+  message: CustomerMessage;
+  /** Simulated customer confirmation after the update. */
+  customerReply: string;
 };
 
 export const clusters = [
@@ -41,6 +51,8 @@ export const playbooks: Record<string, Playbook> = {
     recommended: 0, why: "Smallest change that removes the cause, with a regression test.",
     fix: { kind: "Pull request", title: "PR #191 · Keep idempotency key stable across webhook retries", checks: ["Unit tests", "Retry replay test", "Contract test"] },
     closeout: "Slack thread answered · Harbor asked to re-enable automation after deploy",
+    message: { kind: "bug", summary: "Some orders were created twice in your fulfillment system.", why: "When your system took more than 30 seconds to answer us, we sent the same order again with a new label. Your system thought it was a new order. That was our mistake, not yours.", changed: "A resent order now keeps its original label, so your system recognises it and skips the copy.", youDo: "Turn your automation back on and keep an eye on the next few orders." },
+    customerReply: "Re-enabled this morning, no duplicates so far. Thanks for the clear explanation!",
   },
   "teams-orbit-duplicate-alerts": {
     cluster: "duplicates", agent: "Customer agent",
@@ -57,6 +69,8 @@ export const playbooks: Record<string, Playbook> = {
     recommended: 0, why: "Configuration issue, not the webhook defect. Product idea logged separately.",
     fix: { kind: "Customer reply", title: "Step-by-step reply: remove the older Teams install", checks: ["Tone check", "Steps verified on test tenant"] },
     closeout: "Teams thread answered · idea logged for Product",
+    message: { kind: "bug", summary: "Every alert showed up twice in your Teams channel.", why: "Context is connected to your Teams twice. The old connection from before your admin change is still switched on, so both of them post each alert.", changed: "Nothing was broken on our side. We sent you steps to remove the old connection, and asked our product team to clean these up automatically in future.", youDo: "Remove the older Context app in Teams. It takes about two minutes." },
+    customerReply: "Removed the old one, alerts arrive once again. Thanks!",
   },
   "zendesk-atlas-reset-links": {
     cluster: "access", agent: "Engineering agent",
@@ -74,6 +88,8 @@ export const playbooks: Record<string, Playbook> = {
     recommended: 0, why: "Fixes the cause for all customers behind link scanners.",
     fix: { kind: "Pull request", title: "PR #192 · Consume reset tokens on submit, not on view", checks: ["Unit tests", "Auth flow e2e", "Security review"] },
     closeout: "Zendesk #48213 → Pending · customer told a fix is in review",
+    message: { kind: "bug", summary: "Password reset links had already expired when your staff clicked them.", why: "Your email security scanner clicks every link to check it is safe. Our reset link could only be used once, so the scanner used it up before your staff got to it.", changed: "The link is now only used up when someone actually saves a new password. Scanners can check it without breaking it.", youDo: "Ask someone to request a new reset link and try again." },
+    customerReply: "Two people tried just now and both reset successfully.",
   },
   "slack-meridian-sso": {
     cluster: "access", agent: "Customer agent",
@@ -89,6 +105,8 @@ export const playbooks: Record<string, Playbook> = {
     recommended: 0, why: "Existing capability. Separate from the audit-export decision.",
     fix: { kind: "Customer reply", title: "Reply with Okta session policy steps", checks: ["Docs link verified", "Tone check"] },
     closeout: "Slack thread answered",
+    message: { kind: "question", summary: "Can Context sessions end automatically after 8 hours?", why: "Yes. Your login provider (Okta) decides how long sessions last, and Context follows it.", changed: "Nothing needed to change. We wrote up the exact Okta setting for you.", youDo: "Set the session length to 8 hours in Okta. Context picks it up automatically." },
+    customerReply: "Set it in Okta and it works as expected. Thanks!",
   },
   "salesforce-acme-eu-residency": {
     cluster: "access", agent: "Customer agent",
@@ -105,6 +123,8 @@ export const playbooks: Record<string, Playbook> = {
     recommended: 0, why: "Documented capability; offer the call as an optional follow-up.",
     fix: { kind: "Customer reply", title: "Reply: EU workspace setup + shared IdP", checks: ["Region docs verified", "Legal wording check"] },
     closeout: "Salesforce case 00012877 → Closed · call offered",
+    message: { kind: "question", summary: "Can your German team's workspace keep its data in the EU and still use the same login?", why: "Yes. New workspaces can live in our EU data centre in Frankfurt, and the data stays there. Both workspaces can use your company login.", changed: "We sent the setup steps and offered a call with our solutions team for your works council.", youDo: "Book the call if your works council wants more detail." },
+    customerReply: "That is exactly what our works council needed. We will book the call.",
   },
   "jira-harbor-csv-import": {
     cluster: "data", agent: "Engineering agent",
@@ -122,6 +142,8 @@ export const playbooks: Record<string, Playbook> = {
     recommended: 2, why: "Harbor's nightly import needs to work today; the durable fix follows.",
     fix: { kind: "Config change", title: "Restore proxy limit to 100 MB + PR #193 surface upload errors", checks: ["Config diff reviewed", "62 MB import replayed", "UI error test"] },
     closeout: "Jira SUP-1482 → Resolved · durable fix linked as follow-up",
+    message: { kind: "bug", summary: "Your nightly product import looked finished, but nothing was imported.", why: "An update on Friday lowered the largest file we accept to 50 MB. Your file is 62 MB, so it was turned away. Our screen did not show the error, so it looked like it worked.", changed: "We raised the limit back to 100 MB. The import screen now shows a clear message if an upload ever fails.", youDo: "Nothing. Tonight's import should run as normal." },
+    customerReply: "Last night's import completed. All 62 MB loaded.",
   },
   "linear-meridian-report-timezone": {
     cluster: "data", agent: "Engineering agent",
@@ -137,6 +159,8 @@ export const playbooks: Record<string, Playbook> = {
     recommended: 0, why: "Handles daylight-saving changes; also fixes 2 unreported workspaces.",
     fix: { kind: "Pull request", title: "PR #194 · Schedule reports in the workspace time zone", checks: ["Unit tests", "DST boundary tests"] },
     closeout: "Linear CR-87 → Done · Meridian notified via CS",
+    message: { kind: "bug", summary: "Your 8:00 weekly report arrived 8 hours late.", why: "We scheduled it with our server's clock (UTC) instead of your workspace's Singapore time.", changed: "Reports now follow your workspace time zone, including when clocks change for daylight saving.", youDo: "Nothing. Your next report arrives at 8:00 Singapore time." },
+    customerReply: "This week's report arrived at 8:00 sharp. Thank you!",
   },
   "intercom-kestrel-mobile-crash": {
     cluster: "clients", agent: "Engineering agent",
@@ -153,6 +177,8 @@ export const playbooks: Record<string, Playbook> = {
     recommended: 0, why: "Fixes the race without losing the startup gain.",
     fix: { kind: "Pull request", title: "PR #195 · Wait for session restore before deep-link routing", checks: ["Unit tests", "Cold-start UI test", "TestFlight build"] },
     closeout: "Intercom conversation replied · hotfix in review, no date promised",
+    message: { kind: "bug", summary: "The iPhone app closed when you opened a shared dashboard from an email.", why: "In the latest update, the app tried to open the dashboard before it had finished signing you in, and that made it crash.", changed: "The app now waits until you are signed in before opening the dashboard. The update is waiting for Apple's review.", youDo: "Until the update arrives, open dashboards from inside the app. That works fine." },
+    customerReply: "Updated the app and shared links open fine now.",
   },
   "github-orbit-node24": {
     cluster: "clients", agent: "Engineering agent",
@@ -169,6 +195,8 @@ export const playbooks: Record<string, Playbook> = {
     recommended: 0, why: "Matches the contributor's proposal; credit them in the PR.",
     fix: { kind: "Pull request", title: "PR #196 · Clone request before retry (Node 24)", checks: ["Node 20/22/24 matrix", "Regression test"] },
     closeout: "GitHub #912 → linked PR · contributor credited",
+    message: { kind: "bug", summary: "The SDK's automatic retries failed after you moved to Node 24.", why: "Node 24 only lets a request be read once. When a call failed, our SDK tried to send the very same request again, and Node refused.", changed: "The SDK now makes a fresh copy of the request before it retries. Your example and idea helped, and you are credited in the fix.", youDo: "Update to the next patch release of the SDK." },
+    customerReply: "Upgraded our workers to Node 24 with the patch and retries work. Thanks for the credit!",
   },
   "slack-atlas-invoices": {
     cluster: "commercial", agent: "Billing agent",
@@ -184,6 +212,8 @@ export const playbooks: Record<string, Playbook> = {
     recommended: 0, why: "Self-serve and already supported.",
     fix: { kind: "Customer reply", title: "Reply: where to add the PO reference", checks: ["Screenshot verified", "Tone check"] },
     closeout: "Slack thread answered",
+    message: { kind: "question", summary: "Can your invoices show a purchase-order (PO) number?", why: "Yes, this already exists. Add the PO number once under Billing, Invoice details, and it appears on every future invoice.", changed: "We sent the steps with a screenshot.", youDo: "Ask your admin to add the PO number. It takes about a minute." },
+    customerReply: "Found it and added our PO. Thanks!",
   },
   "hubspot-kestrel-seat-pricing": {
     cluster: "commercial", agent: "Billing agent",
@@ -199,6 +229,8 @@ export const playbooks: Record<string, Playbook> = {
     recommended: 0, why: "Pricing conversations stay with a person.",
     fix: { kind: "Account handoff", title: "Plan comparison + talking points for the account manager", checks: ["Pricing page verified", "No discount implied"] },
     closeout: "HubSpot ticket → assigned to account manager",
+    message: { kind: "question", summary: "Is there a cheaper way to give seasonal staff read-only access?", why: "Yes. The Business plan includes free viewer seats for people who only need to look, not edit.", changed: "Your account manager is preparing a side-by-side plan comparison. Nothing on your account changes until you decide.", youDo: "Look out for the comparison before your budget planning." },
+    customerReply: "Great, looking forward to the comparison.",
   },
   "gmail-northstar-soc2": {
     cluster: "commercial", agent: "Customer agent",
@@ -214,5 +246,7 @@ export const playbooks: Record<string, Playbook> = {
     recommended: 0, why: "Tracked access under the existing NDA.",
     fix: { kind: "Customer reply", title: "Reply with trust-portal invite", checks: ["NDA verified", "Domain verified"] },
     closeout: "Gmail thread replied · labelled Done",
+    message: { kind: "question", summary: "Can you send your latest SOC 2 report?", why: "Yes. Our latest SOC 2 Type II report (March 2026) and bridge letter are ready, and your existing NDA covers them.", changed: "We sent you a personal invite to our trust portal.", youDo: "Open the invite to download both documents." },
+    customerReply: "Got access and downloaded both. Thanks for the quick turnaround.",
   },
 };

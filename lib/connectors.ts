@@ -14,6 +14,8 @@ export type ConnectorTicket = {
   severity: "S2" | "S3";
   issueType: "malfunction" | "feature_request";
   customer: string;
+  /** Reporter's name as shown in the source system. */
+  contact: string;
   category: string;
   /** Simulated agent work for this ticket; always ends at a proposal for a human. */
   playbook: Playbook;
@@ -39,6 +41,7 @@ export const connectorTickets: ConnectorTicket[] = customerSignals
       severity: signal.priority === "high" ? "S2" : "S3",
       issueType: requestCategories.has(signal.category) ? "feature_request" : "malfunction",
       customer: signal.customer.name,
+      contact: signal.source.author.split(" · ")[0],
       category: signal.category,
       playbook: playbooks[signal.id] ?? missingPlaybook(signal.id),
     } satisfies ConnectorTicket;

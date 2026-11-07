@@ -15,6 +15,7 @@
     { title: 'Brainstorm the options', sub: 'Two or three ways to solve each ticket, with effort and risk, and one recommendation.', status: 'Brainstorming' },
     { title: 'Prepare every fix', sub: 'Pull requests, replies and config changes are drafted and checked. None are executed yet.', status: 'Preparing fixes' },
     { title: 'Your approval', sub: 'Nothing leaves Context until you approve it. Unapproved items stay on hold.', status: 'Waiting for your decision' },
+    { title: 'Explain it to the customer', sub: 'In their own channel: what went wrong, what we changed, and a request to confirm. Not just a merged PR.', status: 'Talking to customers' },
     { title: 'Close the loop in every source', sub: 'Each approved action is recorded back where the customer raised the ticket.', status: 'Confirmed complete' },
   ];
   const APPROVAL = 6;
@@ -61,7 +62,7 @@
 
   function ticketList(kind) {
     return `<div class="flow-list" role="list">${tickets.map((t, i) => {
-      const doneLabel = kind === 'research' ? `${t.research.length} findings` : `${t.options.length} options`;
+      const doneLabel = kind === 'research' ? `${t.research.length} findings` : kind === 'talk' ? (approved.has(i) ? 'confirmed' : 'held') : `${t.options.length} options`;
       return `<button type="button" role="listitem" class="flow-list-item ${i === selected ? 'is-selected' : ''}" data-ticket="${i}" aria-pressed="${i === selected}">${mark(t.provider, 'sm')}<span><strong>${esc(t.title)}</strong><small>${esc(t.customer)} · ${esc(t.agent)}</small></span><em>${doneLabel}</em></button>`;
     }).join('')}</div>`;
   }
@@ -84,6 +85,26 @@
       <p class="flow-label">OPTIONS THE AGENT CONSIDERED</p>
       <div class="option-grid">${t.options.map((o, i) => `<div class="option-card ${i === t.recommended ? 'is-recommended' : ''}" style="--d:${i}">${i === t.recommended ? '<span class="option-badge">Recommended</span>' : ''}<strong>${esc(o.title)}</strong><p>${esc(o.note)}</p><dl><div><dt>Effort</dt><dd>${esc(o.effort)}</dd></div><div><dt>Risk</dt><dd class="risk-${o.risk.toLowerCase()}">${esc(o.risk)}</dd></div></dl></div>`).join('')}</div>
       <p class="flow-why"><b>Why this one:</b> ${esc(t.why)}</p></article></div>`;
+  }
+
+  const firstName = name => String(name).split(' ')[0];
+  const bug = t => window.ContextMessage.isBug(t);
+  function bubble(from, who, body, label, extra = '') {
+    return `<li class="bubble from-${from} ${extra}"><div class="bubble-head"><b>${esc(who)}</b>${label ? `<em>${esc(label)}</em>` : ''}</div>${body}</li>`;
+  }
+  const textBody = text => `<p>${esc(text)}</p>`;
+  function talkBack() {
+    const t = tickets[selected], ok = approved.has(selected), where = provider(t.provider).name;
+    const update = window.ContextMessage.html(t);
+    return `<div class="flow-split">${ticketList('talk')}<article class="flow-detail">${ticketHead(t)}
+      <p class="flow-label">MESSAGE TO ${esc(t.contact.toUpperCase())} IN ${esc(where.toUpperCase())}</p>
+      <ol class="lt-thread talk-thread">
+        ${bubble('customer', t.contact, textBody(t.title), 'Original report')}
+        ${bubble('agent', 'Context agent', textBody(`Hi ${firstName(t.contact)}, thanks for reporting this. Our ${t.agent.toLowerCase()} is looking into it now. I will share what we find right here in ${where}.`), 'Auto-acknowledgement')}
+        ${ok ? bubble('agent', 'Context agent', update, 'Approved by you', 'is-update') : bubble('agent', 'Draft · not sent', update, 'Held for your approval', 'is-update is-draft')}
+        ${ok ? bubble('customer', t.contact, textBody(t.customerReply), 'Simulated reply') : ''}
+      </ol>
+      <p class="flow-why"><b>Why this matters:</b> code review ends at a merged PR. Context ends when ${esc(firstName(t.contact))} knows ${bug(t) ? 'what broke, why, and what changed' : 'the answer'}, and confirms it works.</p></article></div>`;
   }
 
   function fixes() {
@@ -116,7 +137,7 @@
       }).join('')}</div>`;
   }
 
-  const renderers = [scan, group, assign, research, brainstorm, fixes, approval, closeLoop];
+  const renderers = [scan, group, assign, research, brainstorm, fixes, approval, talkBack, closeLoop];
 
   // ---- frame -----------------------------------------------------------------------------------
   function render() {
@@ -145,10 +166,10 @@
   function startAnim() {
     clearInterval(anim);
     tickN = 0;
-    const limits = { 0: connectors.length, 5: tickets.reduce((n, t) => n + t.fix.checks.length, 0), 7: tickets.length };
+    const limits = { 0: connectors.length, 5: tickets.reduce((n, t) => n + t.fix.checks.length, 0), 8: tickets.length };
     if (!(step in limits)) return;
     if (reduced) { tickN = limits[step]; return; }
-    const speed = { 0: 320, 5: 90, 7: 260 }[step];
+    const speed = { 0: 320, 5: 90, 8: 260 }[step];
     anim = setInterval(() => {
       tickN++;
       if (tickN >= limits[step]) clearInterval(anim);
@@ -160,11 +181,11 @@
 
   // While playing research/brainstorm, cycle a few tickets so the audience sees variety.
   function startCycle() {
-    if (!playing || (step !== 3 && step !== 4)) return;
+    if (!playing || (step !== 3 && step !== 4 && step !== 7)) return;
     let shown = 0;
     clearInterval(startCycle.t);
     startCycle.t = setInterval(() => {
-      if (!playing || (step !== 3 && step !== 4)) { clearInterval(startCycle.t); return; }
+      if (!playing || (step !== 3 && step !== 4 && step !== 7)) { clearInterval(startCycle.t); return; }
       if (++shown >= 3) { clearInterval(startCycle.t); return; }
       selected = (selected + 1) % tickets.length;
       render();
@@ -209,10 +230,11 @@
 
   // ---- events ----------------------------------------------------------------------------------
   document.addEventListener('click', event => {
+    if (document.body.classList.contains('mode-live')) return;
     const nav = event.target.closest('[data-href]');
     if (nav) { location.assign(nav.dataset.href); return; }
     const pick = event.target.closest('[data-ticket]');
-    if (pick && (step === 3 || step === 4)) { stop(); selected = Number(pick.dataset.ticket); render(); return; }
+    if (pick && (step === 3 || step === 4 || step === 7)) { stop(); selected = Number(pick.dataset.ticket); render(); return; }
     if (pick && step < 3) { stop(); selected = Number(pick.dataset.ticket); go(3); return; }
     const bulk = event.target.closest('[data-approve]');
     if (bulk) { approved = bulk.dataset.approve === 'all' ? new Set(tickets.map((_, i) => i)) : new Set(); render(); return; }
@@ -229,7 +251,7 @@
   $('#flow-back').addEventListener('click', () => { stop(); go(step - 1); });
   $('#flow-reset').addEventListener('click', () => { approved = new Set(); playing = false; clearTimeout(timer); go(0); tickN = 0; clearInterval(anim); render(); toast('Scenario restarted.'); });
   document.addEventListener('keydown', event => {
-    if (event.target.closest('input, textarea, select')) return;
+    if (document.body.classList.contains('mode-live') || event.target.closest('input, textarea, select')) return;
     if (event.key === 'ArrowRight') { stop(); go(step + 1); }
     if (event.key === 'ArrowLeft') { stop(); go(step - 1); }
   });

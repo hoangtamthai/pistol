@@ -33,6 +33,14 @@ test("every pullable ticket has a complete agent playbook that stops at a propos
     assert.ok(playbook.options[playbook.recommended], `${externalId} recommends a missing option`);
     assert.ok(playbook.fix.checks.length >= 1);
     assert.ok(playbook.closeout.length > 5);
+    const { message } = playbook;
+    for (const part of [message.summary, message.why, message.changed, message.youDo]) {
+      assert.ok(part.length > 10 && part.length <= 200, `${externalId}: keep each message part short (${part.length} chars)`);
+    }
+    assert.ok(playbook.customerReply.length > 10);
+    const text = `${message.summary} ${message.why} ${message.changed} ${message.youDo}`;
+    assert.doesNotMatch(text, /\b(guarantee|by (monday|tomorrow|end of))\b/i, `${externalId} must not promise dates`);
+    assert.doesNotMatch(text, /\b(idempoten\w*|tokens?|proxy|HTTP|413|async\w*|deep[- ]link\w*|endpoint|regression|WHATWG|payload)\b/i, `${externalId}: use everyday words in customer messages`);
   }
   for (const cluster of clusters) assert.ok(connectorTickets.some(ticket => ticket.playbook.cluster === cluster.id), `${cluster.id} is empty`);
 });

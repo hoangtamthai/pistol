@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const tickets = connectorTickets.map(({ provider, externalId, title, customer, category, severity, playbook }) => ({ provider, ref: externalId.slice(provider.length + 1), title: title.slice(customer.length + 2), customer, category, severity, ...playbook }));
+    const tickets = connectorTickets.map(({ provider, externalId, title, customer, contact, category, severity, issueType, playbook }) => ({ provider, ref: externalId.slice(provider.length + 1), title: title.slice(customer.length + 2), customer, contact, category, severity, issueType, ...playbook }));
     return Response.json({ simulated: true, connectors: connectorStatus(caseStore().snapshot()), clusters, tickets }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return apiError(error); }
 }
