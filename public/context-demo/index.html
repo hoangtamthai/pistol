@@ -5,17 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#FFFFFF">
   <meta name="description" content="Explore two interactive Context demos: parallel customer agents and an issue moving from first report to verified recovery.">
-  <title>Context — Workflow demos</title>
+  <title>Context · Customer operations</title>
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/context-demo/styles.css">
+  <link rel="stylesheet" href="/context-demo/records.css">
   <script src="/context-demo/demo-engine.js" defer></script>
   <script src="/context-demo/app.js" defer></script>
 </head>
 <body>
   <header class="app-header">
-    <a class="brand" href="#" id="brand" aria-label="Context demo home"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>context<span class="brand-divider"></span><span class="brand-caption">Workflow demos</span></a>
+    <a class="brand" href="#" id="brand" aria-label="Context demo home"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>context<span class="brand-divider"></span><span class="brand-caption">Customer operations</span></a>
     <nav class="scenario-tabs" role="tablist" aria-label="Demo scenario"><button type="button" id="away-tab" role="tab" aria-selected="true" aria-controls="demo-screen" data-scenario="away">Founder overview</button><button type="button" id="lifecycle-tab" role="tab" aria-selected="false" aria-controls="demo-screen" data-scenario="lifecycle">Issue lifecycle</button></nav>
-    <div class="demo-label"><span></span>Interactive demo</div>
+    <nav class="records-nav" aria-label="Workspace"><a href="/context/issues">All issues</a><a href="/context/issues/new" class="button-primary">Submit issue</a></nav>
   </header>
   <main class="workspace" id="demo-screen" role="tabpanel" aria-labelledby="away-tab">
     <section class="workspace-heading"><div><p class="eyebrow" id="scenario-number">SCENARIO 01</p><h1 id="scenario-title">While you’re away.</h1><p id="scenario-subtitle">Two cases move forward. You decide what happens next.</p></div><span id="phase-status" class="phase-status">Ready to play</span></section>

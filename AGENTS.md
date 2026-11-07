@@ -2,6 +2,18 @@
 
 ## Fixes
 
+- Recheck file length after deletions before requesting an old read offset; records.js no longer has the earlier line ranges. (E)
+
+- Test disabled fieldsets through a descendant submit button; Playwright isDisabled() on the fieldset itself does not reflect disabled form controls. (E)
+
+- For selects nested in labels, use getByRole('combobox', { name, exact: true }); exact getByLabel can include every option's text even when the accessible name is correct. (E)
+
+- Context scenario buttons declare role="tab"; browser checks must locate them as tabs rather than buttons. (E)
+
+- Give CaseStore.change an explicit return type when lifecycle commands reuse it recursively; TypeScript cannot infer recursive return expressions under strict mode. (E)
+
+- For exact replacements in lifecycle conditions, copy the current expression verbatim; an extra space in a regex negation causes the entire edit batch to fail. (E)
+
 - Wait for Next.js to report Ready before the first HTTP probe; launching it in the background does not mean the port is listening yet. (E)
 - Run Chromium and Firefox Context browser checks separately with a 180-second command timeout; combining both with the unit suite and strict TypeScript check can exceed 120 seconds. (E)
 

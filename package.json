@@ -9,7 +9,8 @@
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test lib/*.test.ts",
-    "test:context": "node scripts/test-context-demo.cjs"
+    "test:context": "node scripts/test-context-demo.cjs",
+    "test:context-workspace": "node scripts/test-context-workspace.cjs"
   },
   "dependencies": {
     "@elevenlabs/react": "1.21.1",

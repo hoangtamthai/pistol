@@ -2,7 +2,7 @@
 
 ## Before demonstrating
 
-Run this repository with `npm run dev` and open `/context` on the printed address. Use a desktop browser, 1180px or wider and at least 700px tall. The app remembers progress, so select a scenario and click **Restart this scenario** before a fresh take.
+Run this repository with `npm run dev` and open `/context?demo=1` on the printed address for the two original scripted scenarios. The default `/context` app routes Issue lifecycle to saved database issues instead. Use a desktop browser, 1180px or wider and at least 700px tall. The app remembers progress, so select a scenario and click **Restart this scenario** before a fresh take.
 
 **Play demo** advances the scripted workflow. **Next** advances one step for precise presenting. Click a card for details. Opening details pauses playback.
 

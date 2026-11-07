@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { chmodSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { accounts as sampleAccounts, sources, requests } from "./demo";
+import { issueLifecycle } from "./lifecycle";
 import { affectedAccounts, calculateScenario, CaseError, issueStates, object, oneOf, sanitize, text, WORKSPACE_ID, type Account, type Issue, type Proposal, type Relationship, type Report, type ScenarioInput, type Snapshot } from "./issues";
 
 const tables = ["issues", "reports", "relationships", "evidence", "proposals", "accounts", "outcomes", "workItems", "events", "jobs"] as const;
@@ -118,10 +119,11 @@ export class CaseStore {
     const sourceRevision = text(body.sourceRevision, "Source revision", 40);
     const source = oneOf(body.source, ["form", "helpdesk", "email", "slack", "call", "public_web"], "source");
     const content = sanitize(text(body.text, "Report"));
+    const comment = body.comment === undefined || body.comment === "" ? "" : sanitize(text(body.comment, "Comment", 2000));
     const environment = sanitize(text(body.environment, "Environment", 80));
     const existing = this.all<Report>("reports").find(report => report.externalId === externalId && report.source === source && report.sourceRevision === sourceRevision);
     if (existing) {
-      if (existing.text !== content || existing.environment !== environment) throw new CaseError("Source revision already exists with different content. Submit a new revision.", 409);
+      if (existing.text !== content || existing.environment !== environment || (existing.comment || "") !== comment) throw new CaseError("Source revision already exists with different content. Submit a new revision.", 409);
       const link = this.all<Relationship>("relationships").find(edge => edge.fromId === existing.id && edge.status === "confirmed");
       return { issueId: link!.toId, jobId: `job-${existing.id}` };
     }
@@ -136,7 +138,7 @@ export class CaseStore {
       issue = { id: id("ISS"), title: sanitize(text(body.title, "Title", 160)), severity: oneOf(body.severity, ["S1", "S2", "S3", "S4"], "severity"), state: "needs_context", owner: "Triage", environment, revision: 1, deployed: false, createdAt: now() };
       this.save("issues", issue.id, issue);
     }
-    const report: Report = { id: id("report"), externalId, sourceRevision, source, text: content, environment, accountId: null, receivedAt: now(), sentiment: oneOf(body.sentiment, ["unknown", "neutral", "concerned", "angry"], "sentiment"), issueType: oneOf(body.issueType, ["malfunction", "feature_request", "opinion", "unverified"], "issue type"), fixture: false };
+    const report: Report = { id: id("report"), externalId, sourceRevision, source, text: content, comment, environment, accountId: null, receivedAt: now(), sentiment: oneOf(body.sentiment, ["unknown", "neutral", "concerned", "angry"], "sentiment"), issueType: oneOf(body.issueType, ["malfunction", "feature_request", "opinion", "unverified"], "issue type"), fixture: false };
     this.save("reports", report.id, report);
     const linkId = id("link");
     this.save("relationships", linkId, { id: linkId, fromId: report.id, toId: issue.id, type: "REPORTS", status: "confirmed", rationale: "Report preserved in its own case; no account or shared cause inferred.", evidenceIds: [report.id], reviewer: "local-operator" });
@@ -151,11 +153,52 @@ export class CaseStore {
     this.event(issue.id, "report.ingested", `${report.id} · ${source} revision ${sourceRevision}; account identity unverified.`);
     return { issueId: issue.id, jobId };
   }
-  private change(body: Record<string, unknown>) {
+  private change(body: Record<string, unknown>): { issueId: string } {
     const issue = this.get<Issue>("issues", text(body.issueId, "Issue ID", 100));
     if (!Number.isInteger(body.revision) || body.revision !== issue.revision) throw new CaseError("This case changed. Refresh and review the latest evidence before retrying.", 409);
     const action = text(body.action, "Action", 40);
-    if (action === "context") {
+    if (action === "workflow_advance") {
+      const view = issueLifecycle(this.snapshot(), issue.id);
+      if (body.step !== view.lifecycle.step) throw new CaseError("Workflow changed. Refresh before continuing.", 409);
+      if (!view.lifecycle.canAdvance) throw new CaseError(view.lifecycle.reason, 409);
+      if (view.lifecycle.step === 4) {
+        const proposalId = id("proposal");
+        const clarification = view.evidence.findLast(item => item.kind === "customer_reported");
+        const plan = `Issue: ${issue.title}\nEnvironment: ${issue.environment}\nOwner: ${issue.owner}\n\n${view.investigation!.text}${clarification ? `\n\nLatest customer clarification:\n${clarification.text}` : ""}\n\nOperator-supplied evidence. No repository access, tests, PR, or deployment was performed by Context.`;
+        this.save("proposals", proposalId, { id: proposalId, issueId: issue.id, kind: "fix", recipient: "INTERNAL", channel: "internal_review", text: plan, inputRevision: issue.revision, status: "awaiting_approval", createdAt: now() });
+      }
+      if (view.lifecycle.step === 7) {
+        issue.state = "resolved";
+        this.touch(issue);
+      }
+      issue.workflowStep = view.lifecycle.step + 1;
+      this.save("issues", issue.id, issue);
+      this.event(issue.id, "workflow.advanced", `Step ${issue.workflowStep + 1}: ${view.lifecycle.stages[issue.workflowStep]}. Local orchestration only.`);
+      return { issueId: issue.id };
+    } else if (action === "workflow_investigation") {
+      if (issueLifecycle(this.snapshot(), issue.id).lifecycle.step < 3) throw new CaseError("Review report context and assign an owner before investigation.", 409);
+      const findings = text(body.findings, "Investigation findings", 1000);
+      const fix = text(body.fix, "Proposed fix and delivery tradeoff", 1000);
+      const checks = text(body.checks, "Verification plan and results", 1000);
+      this.evidence(issue.id, "reviewed_investigation", "Operator investigation and proposed fix", `Findings:\n${findings}\n\nProposed fix and tradeoff:\n${fix}\n\nVerification plan and recorded results:\n${checks}`);
+      issue.workflowStep = 3;
+      issue.state = "investigating";
+      this.event(issue.id, "investigation.recorded", "Operator-supplied findings and proposed fix saved. Not an automated repository analysis.");
+    } else if (action === "workflow_deploy") {
+      const view = issueLifecycle(this.snapshot(), issue.id);
+      if (view.lifecycle.step !== 6 || view.proposal?.status !== "approved" || view.proposal.inputRevision !== issue.revision) throw new CaseError("A current approved fix plan is required before simulated deployment.", 409);
+      if (body.reviewed !== true) throw new CaseError("Acknowledge the simulated deployment verification.");
+      const basis = text(body.basis, "Deployment verification evidence", 1000);
+      this.save("proposals", view.proposal.id, { ...view.proposal, status: "simulated" });
+      this.evidence(issue.id, "simulation", "Simulated deployment verification", basis);
+      this.change({ action: "deployment", issueId: issue.id, revision: issue.revision });
+      return { issueId: issue.id };
+    } else if (action === "workflow_confirm") {
+      const view = issueLifecycle(this.snapshot(), issue.id);
+      if (view.lifecycle.step !== 7 || !issue.deployed || view.proposal?.status !== "simulated") throw new CaseError("Verify deployment before recording recovery in this workflow.", 409);
+      if (body.reviewed !== true) throw new CaseError("Acknowledge the customer's separate reply.");
+      return this.change({ ...body, action: "outcome" });
+    } else if (action === "context") {
       this.evidence(issue.id, "customer_reported", "Customer clarification · recorded by operator", text(body.answer, "Clarification"));
       this.event(issue.id, "context.received", "A correction or clarification was recorded. Previous versions remain in the evidence trail.");
     } else if (action === "state") {
@@ -168,6 +211,7 @@ export class CaseStore {
       }
       issue.state = state;
       issue.owner = sanitize(text(body.owner, "Owner", 100));
+      if (body.severity !== undefined) issue.severity = oneOf(body.severity, ["S1", "S2", "S3", "S4"], "severity");
       this.event(issue.id, "issue.state_changed", `${state} · ${issue.owner} · ${reason}`);
     } else if (action === "relationship") {
       const edge = this.get<Relationship>("relationships", text(body.edgeId, "Relationship ID", 100));
@@ -213,7 +257,9 @@ export class CaseStore {
       const proposal = this.get<Proposal>("proposals", text(body.proposalId, "Proposal ID", 100));
       if (proposal.issueId !== issue.id) throw new CaseError("Proposal is not part of this case.", 404);
       if (proposal.inputRevision !== issue.revision || proposal.status === "stale") throw new CaseError("Stale approval. Create and review a new draft against the current case revision.", 409);
+      if (proposal.kind === "fix" && action === "execute") throw new CaseError("Use the lifecycle deployment check to execute a fix simulation.", 409);
       if (action === "approve") {
+        if (proposal.kind === "fix" && body.reviewed !== true) throw new CaseError("Review and acknowledge the exact fix plan before approving.");
         if (proposal.status !== "awaiting_approval") throw new CaseError("Only a pending draft can be approved.", 409);
         proposal.status = "approved";
       } else {

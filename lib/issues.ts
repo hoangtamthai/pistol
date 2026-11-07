@@ -3,11 +3,11 @@ import { addBusinessDays } from "./demo";
 export const WORKSPACE_ID = "orbit-local";
 export const issueStates = ["new", "needs_context", "triaged", "investigating", "planned", "in_progress", "verifying", "resolved", "reopened", "dismissed"] as const;
 export type IssueState = typeof issueStates[number];
-export type Issue = { id: string; title: string; severity: string; state: IssueState; owner: string; environment: string; revision: number; deployed: boolean; createdAt: string };
-export type Report = { id: string; externalId: string; sourceRevision: string; source: string; text: string; environment: string; accountId: string | null; receivedAt: string; sentiment: string; issueType: string; fixture: boolean };
+export type Issue = { workflowStep?: number; id: string; title: string; severity: string; state: IssueState; owner: string; environment: string; revision: number; deployed: boolean; createdAt: string };
+export type Report = { comment?: string; id: string; externalId: string; sourceRevision: string; source: string; text: string; environment: string; accountId: string | null; receivedAt: string; sentiment: string; issueType: string; fixture: boolean };
 export type Relationship = { id: string; fromId: string; toId: string; type: "REPORTS" | "POSSIBLY_CAUSED_BY" | "RELATED_TO"; status: "proposed" | "confirmed" | "rejected"; rationale: string; evidenceIds: string[]; reviewer: string | null };
 export type Evidence = { id: string; issueId: string; kind: string; title: string; text: string; createdAt: string };
-export type Proposal = { id: string; issueId: string; kind: "jira" | "outreach"; recipient: string; channel: string; text: string; inputRevision: number; status: "awaiting_approval" | "approved" | "simulated" | "stale"; createdAt: string };
+export type Proposal = { id: string; issueId: string; kind: "jira" | "outreach" | "fix"; recipient: string; channel: string; text: string; inputRevision: number; status: "awaiting_approval" | "approved" | "simulated" | "stale"; createdAt: string };
 export type Account = { id: string; name: string; arr: number; currency: string; recipient: string };
 export type Snapshot = { issues: Issue[]; reports: Report[]; relationships: Relationship[]; evidence: Evidence[]; proposals: Proposal[]; accounts: Account[]; outcomes: { issueId: string; accountId: string; state: string }[]; workItems: { issueId: string; externalId: string; state: string }[]; events: { id: string; issueId: string; type: string; detail: string; createdAt: string }[] };
 

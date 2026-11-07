@@ -4,7 +4,7 @@
 
 1. Paste the prompt below into Claude.
 2. Add the five screenshots from `screenshots`, or upload short screen recordings of the same screens. The screenshots are actual captures of the frontend.
-3. Record the integrated demo at `/context` on this app's address. For local development, use the port printed by `npm run dev`. The original screenshots remain in `Context-UI-Handoff.zip`.
+3. Record the two original scripted scenarios at `/context?demo=1` on this app's address. The default `/context` app now opens saved database issues from its lifecycle tab. For local development, use the port printed by `npm run dev`. The original screenshots remain in `Context-UI-Handoff.zip`.
 
 A local app is not accessible to an external editor. Use the supplied captures or your recordings instead of assuming it has access. No public deployment is provided by this handoff. Do not include credentials.
 

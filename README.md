@@ -1,8 +1,8 @@
-# Pistol
+# Context
 
 Customer issue intelligence: preserve the report, review the evidence, coordinate engineering work, and verify each customer's recovery.
 
-The app now includes a **password-protected, single-workspace SQLite MVP** at `/issues`, based on [the customer issue specification](docs/customer-issue-intelligence-technical-spec.md). The original synthetic decision/voice demo remains at `/demo`, with its inbox at `/inbox`.
+The main app uses the Context handoff UI with a **password-protected, single-workspace SQLite workflow**. Submit issues at `/context/issues/new`, browse every saved issue at `/context/issues`, and open an issue's automatic lifecycle. The detailed evidence workspace remains at `/issues`, based on [the customer issue specification](docs/customer-issue-intelligence-technical-spec.md). The older Pistol decision/voice demo remains at `/demo`, with its inbox at `/inbox`.
 
 ## Run
 
@@ -15,7 +15,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open the address printed by Next.js, normally http://127.0.0.1:3000. The root opens `/issues`, which redirects to `/login` until signed in. There is no default password. Four-letter passwords are accepted for local use; longer unique passwords are recommended. Sessions expire after eight hours; changing the password revokes them. The original fictional demo is publicly readable, but funded voice sessions require workspace sign-in.
+Open the address printed by Next.js, normally http://127.0.0.1:3000. The root opens `/context`. The founder overview is a public scripted demo; submission, issue records, and saved lifecycles require sign-in through their API and return you to the requested page after login. There is no default password. Four-letter passwords are accepted for local use; longer unique passwords are recommended. Sessions expire after eight hours; changing the password revokes them. The original fictional demo is publicly readable, but funded voice sessions require workspace sign-in.
 
 SQLite defaults to `data/relay.sqlite`. Set `RELAY_DB_PATH` to change it. Reports, revisions, reviews, evidence, proposals, simulated Jira mappings, scenarios, account outcomes, completed intake jobs, and audit events survive browser and server restarts. The database and sidecar files are tracked by Git at the operator's request. Keep only sanitized test data in them: committing exposes their contents to repository readers. The local database file is owner-readable/writable only; those permissions do not protect committed copies.
 
@@ -26,11 +26,16 @@ npm run build
 npm start
 ```
 
-## Context workflow demo
+## Main Context workflow
 
-Open `/context` for the two scenarios from `Context-UI-Handoff.zip`: **Founder overview** and **Issue lifecycle**. The supplied light desktop UI is served directly, without a React port or changes to `/demo`, `/inbox`, or `/issues`. No sign-in is needed; all records and external actions are simulated.
+- `/context`: handoff UI and labeled **Founder overview** sample. **Issue lifecycle** opens the saved issue list, not the scripted CV-upload case.
+- `/context/issues/new`: issue title, environment, severity, description, and an optional **Comment** saved separately on the report. Submission opens the new issue's lifecycle. Retrying an uncertain save reuses the same idempotency key.
+- `/context/issues`: every issue in the SQLite workspace, including existing fixtures. Search by title, owner, state, or ID, and open any lifecycle.
+- `/context/issues/:id`: automatic progression through report, context, ownership, investigation, fix planning, review, deployment verification, follow-up, and recovery. No Next or Continue button is needed. Human checks require ownership, investigation findings, exact-version fix acknowledgment, explicit simulated deployment verification, verified identity, and customer replies. Unknown evidence is never replaced with the CV-upload sample.
 
-Use **Restart this scenario** before presenting. Playback stops for independent approvals and again for explicit simulated customer confirmation. Progress and routing are local to each scenario and persist in this browser. See [presenter clicks](docs/context/Context-Demo-Flows.md), the [two-minute video guide](docs/context/Context-2-Minute-Video-Guide.md), and [validation instructions](docs/context/README.md).
+Progress is saved in SQLite. The browser advances permitted steps while the page is open and visible; there is no background worker. Details and request errors pause progression safely. Case changes invalidate pending approvals. Every verified affected account must confirm before closure; a persistent problem reopens the case. Deployment and customer replies remain operator-recorded simulations, not live integrations.
+
+The two original scripted scenarios remain available at `/context?demo=1`, isolated from database records. See [presenter clicks](docs/context/Context-Demo-Flows.md), the [two-minute video guide](docs/context/Context-2-Minute-Video-Guide.md), and [validation instructions](docs/context/README.md).
 
 ## Durable workflow
 
@@ -43,7 +48,7 @@ Use **Restart this scenario** before presenting. Playback stops for independent 
 7. **Jira simulation:** save and approve an immutable payload, then simulate create/link. Existing issue mappings are reused. Simulated Jira Done does not imply deployment or recovery.
 8. **Follow-up:** a simulated deployment creates verification tasks, including reviewed downstream symptoms. Draft a customer-safe message for a verified fixture contact, approve its exact version, optionally preview audio, then simulate delivery. Each account's recovery is recorded separately with evidence; a “persists” answer reopens the case.
 
-Mutations use optimistic case revisions and idempotency keys inside SQLite transactions. Reusing a key with a different payload fails. A changed message for the same recipient invalidates its previous pending version. **Any case mutation conservatively invalidates all pending workspace approvals**, including approved ones; immutable completed simulation records remain history. Approval and execution recheck case revision. No external send is implemented.
+Mutations use optimistic case revisions and idempotency keys inside SQLite transactions. Reusing a key with a different payload fails. A changed message for the same recipient invalidates its previous pending version. **Case evidence, ownership, and outcome mutations conservatively invalidate all pending workspace approvals**, including approved ones; immutable completed simulation records remain history. Approval and execution recheck case revision. Automatic workflow cursor advances do not change evidence or invalidate approvals; they check both the case revision and expected step inside the transaction. No external send is implemented.
 
 ## ElevenLabs
 
@@ -64,7 +69,8 @@ Follow [docs/elevenlabs.md](docs/elevenlabs.md), set `ELEVENLABS_AGENT_ID`, sign
 - `POST /api/workspace/session`: password sign-in; HttpOnly, SameSite=Strict session cookie.
 - `DELETE /api/workspace/session`: clear the current browser session.
 - `GET /api/issues`: authenticated workspace snapshot, capped at 500 report revisions and the latest 100 audit events. No shared caching.
-- `POST /api/issues`: validated command, `Idempotency-Key` header required. Actions: `intake`, `context`, `map_account`, `relationship`, `state`, `scenario`, `proposal`, `approve`, `execute`, `work_done`, `deployment`, `outcome`. Case actions require `issueId` and `revision`.
+- `GET /api/issues?issue=:id`: authenticated issue, original reports/comments, investigation, fix plan, outcomes, and server-computed lifecycle gates.
+- `POST /api/issues`: validated command, `Idempotency-Key` header required. Actions: `intake`, `context`, `map_account`, `relationship`, `state`, `scenario`, `proposal`, `approve`, `execute`, `work_done`, `deployment`, `outcome`, `workflow_advance`, `workflow_investigation`, `workflow_deploy`, `workflow_confirm`. Fix approvals and workflow verification require explicit acknowledgment. Case actions require `issueId` and `revision`.
 - `GET /api/jobs/:id`: authenticated durable intake receipt with the completed deterministic stage and explicit analysis limitations.
 - `POST /api/outreach/audio`: current approved proposal ID plus explicit provider consent.
 
@@ -95,6 +101,8 @@ These are deterministic regression tests, not a model-accuracy evaluation or pro
 
 ## Main files
 
+- `public/context-demo/records.html`, `records.css`, `records.js`: new Context submission, all-issues, and automatic lifecycle pages.
+- `lib/lifecycle.ts`: evidence-backed lifecycle gates shared by API reads and transactional commands.
 - `components/issue-workspace.tsx`, `app/issues.css`: persistent triage, case, relationship, decision, and follow-up views.
 - `lib/issues.ts`: DTOs, validation, redaction, account union, deterministic scenarios, customer-safe draft template.
 - `lib/case-store.ts`: SQLite transactions, fixtures, revision checks, approvals, audit trail, local simulation adapters.

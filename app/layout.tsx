@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Pistol · Customer issue intelligence",
+  title: "Context · Customer issue intelligence",
   description: "An evidence-driven customer issue workspace with persistent triage, reviewed decisions, and account-specific recovery. Includes clearly labeled simulations.",
 };
 

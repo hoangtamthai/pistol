@@ -21,7 +21,7 @@ async function run() {
     page.on('response', response => { if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`); });
     page.setDefaultTimeout(10000);
     await page.clock.install();
-    const response = await page.goto(`${baseURL}/context`);
+    const response = await page.goto(`${baseURL}/context?demo=1`);
     assert.equal(response.status(), 200);
     assert.match(await page.title(), /Context/);
     assert.equal(new URL(page.url()).pathname, '/context');
