@@ -2,8 +2,12 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ConversationProvider } from "@elevenlabs/react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowRight, ArrowUpRight, AudioLines, BookOpen, Check, CheckCheck, ChevronDown, ChevronRight, CircleCheck, CircleDot, Clock3, Copy, ExternalLink, FileText, Flag, GitBranch, Inbox, Layers3, Lightbulb, Link2, MessageSquare, Plus, RotateCcw, Search, Settings2, ShieldCheck, Sparkles, Users, Workflow, X } from "lucide-react";
 import VoicePanel from "./voice-panel";
+import SignalInbox from "./signal-inbox";
+import { customerSignals } from "@/lib/inbox";
 import { accounts, customerDraft, matchRequests, shortDate, sources, timeline, updateOutcome, type Language, type Option, type Outcome, type Source, type Tab } from "@/lib/demo";
 
 type ModalName = "intake" | "sources" | "setup" | null;
@@ -49,6 +53,10 @@ function Modal({ title, description, children, close, wide = false }: { title: s
 }
 
 export default function Workspace() {
+  const pathname = usePathname();
+  const isInbox = pathname === "/inbox";
+  const [selectedSignalId, setSelectedSignalId] = useState("slack-northstar");
+  const [reviewedSignalIds, setReviewedSignalIds] = useState<string[]>([]);
   const [tab, setTab] = useState<Tab>("brief");
   const [option, setOption] = useState<Option>("workaround");
   const [comparison, setComparison] = useState(false);
@@ -70,6 +78,10 @@ export default function Workspace() {
   const resolvedCount = accounts.filter(account => outcomes[account.id].confirmed).length;
 
   useEffect(() => {
+    document.title = isInbox ? "Signal inbox · Relay" : "Relay · Customer signals, clear decisions";
+  }, [isInbox]);
+
+  useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 5000);
     return () => clearTimeout(timer);
@@ -83,6 +95,19 @@ export default function Workspace() {
     document.addEventListener("keydown", handleEscape);
     return () => { document.removeEventListener("keydown", handleEscape); previous?.focus(); };
   }, [mobileNav]);
+
+  function navigate(path: "/" | "/inbox", nextTab: Tab = "brief") {
+    // Preserve the in-memory draft and voice session when switching workspace views.
+    if (pathname !== path) window.history.pushState(null, "", path);
+    setTab(nextTab);
+    setMobileNav(false);
+    window.scrollTo({ top: 0 });
+    document.getElementById("main-content")?.focus({ preventScroll: true });
+  }
+
+  function showDecision(nextTab: Tab = "brief") {
+    navigate("/", nextTab);
+  }
 
   function chooseOption(next: Option) {
     if (next === option) return;
@@ -105,13 +130,14 @@ export default function Workspace() {
   }
 
   function showComparison() {
-    setTab("brief");
+    showDecision();
     setComparison(true);
     setShowAssumptions(true);
   }
 
   function resetDemo() {
-    setTab("brief"); setOption("workaround"); setComparison(false); setLanguage("en");
+    showDecision(); setReviewedSignalIds([]); setSelectedSignalId("slack-northstar");
+    setOption("workaround"); setComparison(false); setLanguage("en");
     setDraft(customerDraft("workaround", "en")); setApproved(false); setOutcomes(initialOutcomes());
     setMatched(false); setModal("intake"); setShowAssumptions(false); setMobileNav(false);
     setToast("Demo reset. Start with the incoming customer request.");
@@ -140,27 +166,28 @@ export default function Workspace() {
 
   const evidenceButton = (id: string, label?: string) => <button className="inline-source" onClick={() => openSource(id)}><Link2 size={11} />{label || id}<ArrowUpRight size={10} /></button>;
   const filteredSources = sources.filter(item => `${item.title} ${item.location} ${item.excerpt}`.toLowerCase().includes(sourceFilter.toLowerCase()));
-  const screenContext = JSON.stringify({ tab, selectedOption: option, draftApproved: approved, outcomes, note: "State is session-only; no external send or roadmap write is available." });
+  const screenContext = JSON.stringify({ page: isInbox ? "signal inbox" : "decision brief", tab, selectedOption: option, draftApproved: approved, outcomes, note: "State is session-only; no external send or roadmap write is available. The assistant is scoped to the audit-export decision, not unrelated inbox requests." });
 
-  return <ConversationProvider><a className="skip-link" href="#main-content">Skip to decision brief</a><div className="app-shell">
+  return <ConversationProvider><a className="skip-link" href="#main-content">Skip to {isInbox ? "signal inbox" : "decision brief"}</a><div className="app-shell">
     <aside id="workspace-navigation" className={`sidebar ${mobileNav ? "sidebar-open" : ""}`} aria-label="Workspace navigation">
       <div className="sidebar-brand"><Brand /><span className="beta-label">BETA</span><button className="icon-button mobile-close" onClick={() => setMobileNav(false)} aria-label="Close navigation"><X size={18} /></button></div>
       <button className="workspace-switch" onClick={() => { setModal("setup"); setMobileNav(false); }}><span className="workspace-avatar">O</span><span>Orbit workspace<small>Customer operations</small></span><ChevronDown size={14} /></button>
       <div className="sidebar-section-label">WORKSPACE</div>
       <nav className="nav-list">
-        <button onClick={() => { setModal("intake"); setMobileNav(false); }}><Inbox size={18} /><span>Signal inbox</span><span className="nav-count">5</span></button>
-        <button className={tab !== "followups" ? "active" : ""} onClick={() => { setTab("brief"); setMobileNav(false); }} aria-current={tab !== "followups" ? "page" : undefined}><Layers3 size={18} /><span>Decisions</span><span className="nav-count">1</span></button>
-        <button className={tab === "followups" ? "active" : ""} onClick={() => { setTab("followups"); setMobileNav(false); }} aria-current={tab === "followups" ? "page" : undefined}><CheckCheck size={18} /><span>Follow-through</span><span className="nav-count">{accounts.length - resolvedCount}</span></button>
+        <Link href="/inbox" className={isInbox ? "active" : ""} aria-current={isInbox ? "page" : undefined} onNavigate={event => { event.preventDefault(); navigate("/inbox"); }}><Inbox size={18} /><span>Signal inbox</span><span className="nav-count">{customerSignals.length}</span></Link>
+        <Link href="/" className={!isInbox && tab !== "followups" ? "active" : ""} onNavigate={event => { event.preventDefault(); showDecision(); }} aria-current={!isInbox && tab !== "followups" ? "page" : undefined}><Layers3 size={18} /><span>Decisions</span><span className="nav-count">1</span></Link>
+        <button className={!isInbox && tab === "followups" ? "active" : ""} onClick={() => showDecision("followups")} aria-current={!isInbox && tab === "followups" ? "page" : undefined}><CheckCheck size={18} /><span>Follow-through</span><span className="nav-count">{accounts.length - resolvedCount}</span></button>
         <button onClick={() => { setModal("sources"); setMobileNav(false); }}><BookOpen size={18} /><span>Sources</span><span className="nav-count">{sources.length}</span></button>
       </nav>
       <div className="sidebar-section-label decisions-label">PINNED DECISION<span>1</span></div>
-      <button className="pinned-decision" onClick={() => { setTab("brief"); setMobileNav(false); }}><span className="tiny-dot" /><span>Audit export limit<small>3 accounts · Needs a decision</small></span></button>
+      <button className="pinned-decision" onClick={() => showDecision()}><span className="tiny-dot" /><span>Audit export limit<small>3 accounts · Needs a decision</small></span></button>
       <div className="sidebar-bottom"><div className="demo-note"><span className="demo-note-icon"><Sparkles size={16} /></span><strong>Small signal. Bigger picture.</strong><p>Take the complete workflow<br />for a three-minute spin.</p><button onClick={resetDemo}>Replay the demo <ArrowUpRight size={14} /></button></div><button className="sidebar-settings" onClick={() => setModal("setup")}><Settings2 size={17} /> Voice & workspace setup</button><div className="user-profile"><span className="avatar avatar-maya">MP</span><div><strong>Maya Patel</strong><small>Customer Success Lead</small></div><span className="online-dot" /></div></div>
     </aside>
 
     <div className="workspace-main">
-      <header className="topbar"><div className="breadcrumbs"><button className="icon-button mobile-menu" onClick={() => setMobileNav(true)} aria-label="Open navigation" aria-expanded={mobileNav} aria-controls="workspace-navigation"><Layers3 size={20} /></button><span className="breadcrumb-icon"><Layers3 size={16} /></span><button onClick={() => setTab("brief")}>Decisions</button><ChevronRight size={13} /><span>DEC-014</span></div><div className="topbar-right"><span className="sample-indicator"><span />Sample workspace</span><button className="button button-small" onClick={() => setModal("intake")}><Plus size={14} /> New request</button></div></header>
-      <main id="main-content" className="main-content">
+      <header className="topbar"><div className="breadcrumbs"><button className="icon-button mobile-menu" onClick={() => setMobileNav(true)} aria-label="Open navigation" aria-expanded={mobileNav} aria-controls="workspace-navigation"><Layers3 size={20} /></button><span className="breadcrumb-icon">{isInbox ? <Inbox size={16} /> : <Layers3 size={16} />}</span>{isInbox ? <><span>Signal inbox</span><ChevronRight size={13} /><span>All customers</span></> : <><button onClick={() => showDecision()}>Decisions</button><ChevronRight size={13} /><span>DEC-014</span></>}</div><div className="topbar-right"><span className="sample-indicator"><span />Sample workspace</span><button className="button button-small" onClick={() => setModal("intake")}><Plus size={14} /> New request</button></div></header>
+      <main id="main-content" className="main-content" tabIndex={-1}>
+        {isInbox ? <SignalInbox selectedId={selectedSignalId} onSelect={setSelectedSignalId} reviewedIds={reviewedSignalIds} onReview={id => { setReviewedSignalIds(current => current.includes(id) ? current : [...current, id]); setToast("Marked reviewed in this demo. No customer notified or problem resolved."); }} onOpenDecision={() => { setMatched(true); showDecision(); }} onCopy={copyText} /> : <>
         <div className="page-topline"><div className="eyebrow"><span className="live-square" /> CUSTOMER SIGNAL → CLEAR DECISION</div><button className="text-button reset-button" onClick={resetDemo}><RotateCcw size={13} /> Replay demo</button></div>
         <div className="page-heading"><div><div className="heading-badges"><span className={`badge badge-amber`}><span className="tiny-dot" />{approved ? "Reply approved" : "Needs your decision"}</span><span className="decision-id">DEC-014</span></div><h1>A small export limit.<br /><span>A bigger customer problem.</span></h1><p className="page-description">Audit exports stop at 10,000 events. Three accounts need the full picture.<br className="desktop-break" /> One has a security review coming up, and a renewal on the line.</p></div><button className="button share-button" onClick={shareBrief}><Copy size={15} /> Copy brief</button></div>
         <div className="brief-meta"><span><span className="avatar avatar-maya avatar-xs">MP</span> Maya Patel <span className="muted">· CS owner</span></span><span className="meta-divider" /><span><Clock3 size={13} /> Apr 14, 2026 <span className="muted">· Demo snapshot</span></span><span className="meta-divider" /><span className="meta-grounded"><ShieldCheck size={13} /> Every claim has a trail</span></div>
@@ -191,13 +218,14 @@ export default function Workspace() {
 
           {tab === "followups" && <section className="followups-section"><div className="followups-heading"><div><span className="eyebrow">CLOSE THE LOOP, NOT JUST THE TICKET</span><h2>A fix isn’t finished until the customer knows.</h2><p>Track the product event, the communication, and the actual outcome separately.</p></div><button className="button button-primary" disabled={allReleased} onClick={simulateRelease}>{allReleased ? <Check size={15} /> : <GitBranch size={15} />}{allReleased ? "Release simulated" : "Simulate ENG-214 release"}</button></div><div className="simulation-banner"><Lightbulb size={16} /><span><strong>Simulation only.</strong> No Linear issue is updated and no customer is contacted. Drafts do not count as notifications.</span></div><div className="outcome-summary">{[{ label: "Fix released", count: accounts.filter(account => outcomes[account.id].released).length }, { label: "Customer notified", count: accounts.filter(account => outcomes[account.id].notified).length }, { label: "Confirmed resolved", count: resolvedCount }].map((item, index) => <div key={item.label}><span className="outcome-number">0{index + 1}</span><strong>{item.count}<small>/ 3</small></strong><span>{item.label}</span></div>)}</div><div className="followup-accounts">{accounts.map(account => { const outcome = outcomes[account.id]; return <article className="followup-account" key={account.id}><div className="followup-account-head"><span className={`account-logo ${account.color}`}>{account.initials}</span><div><h3>{account.name}</h3><p>{account.blocker ? "Explicit renewal blocker · May 1" : "Affected account · no stated renewal blocker"}</p></div><span className={`badge ${outcome.confirmed ? "badge-green" : "badge-neutral"}`}>{outcome.confirmed ? "Resolved · demo" : outcome.notified ? "Awaiting confirmation" : outcome.released ? "Draft ready" : "Awaiting release"}</span></div><div className="outcome-steps">{[{ label: "Fix released", done: outcome.released }, { label: "Customer notified", done: outcome.notified }, { label: "Customer confirmed", done: outcome.confirmed }].map((step, index) => <div className={step.done ? "outcome-step done" : "outcome-step"} key={step.label}><span>{step.done ? <Check size={13} /> : index + 1}</span>{step.label}</div>)}</div><div className="followup-actions"><button className="button button-small" disabled={!outcome.released || outcome.notified} onClick={() => reviewFollowup(account.id)}><MessageSquare size={13} />Review follow-up</button><button className="text-button" disabled={!outcome.notified || outcome.confirmed} onClick={() => { setOutcomes(current => ({ ...current, [account.id]: updateOutcome(current[account.id], "confirm") })); setToast(`${account.name} confirmation simulated. This is not an actual customer outcome.`); }}><CheckCheck size={14} />Simulate customer confirmation</button></div></article>; })}</div><div className="actuals-note"><Clock3 size={16} /><div><strong>Predictions are not outcomes.</strong><p>Estimated effort: 3–5 person-days. Actual effort, actual release date, and commercial outcome are unmeasured in this demo. A simulated release does not validate the estimate.</p></div></div></section>}
         </div>
+        </>}
         <footer className="page-footer"><Brand small /><span>Good decisions have a paper trail.</span><span className="footer-right">Built for the space between teams.</span></footer>
       </main>
-      <VoicePanel actions={{ openSource, setTab, selectOption: chooseOption, showComparison }} openSetup={() => setModal("setup")} context={screenContext} />
+      <VoicePanel actions={{ openSource, setTab: showDecision, selectOption: chooseOption, showComparison }} openSetup={() => setModal("setup")} context={screenContext} />
     </div>
   </div>
 
-  {modal === "intake" && <Modal title="One message. The whole picture." description="Incoming request · Simulated Slack integration" close={() => setModal(null)}><div className="intake-channel"><SourceIcon kind="slack" size={22} /><div><strong>#shared-northstar</strong><span>Apr 14, 2026 · 09:42</span></div><span className="badge badge-blue">{matched ? "Matched" : "New signal"}</span></div><div className="intake-message"><span className="avatar avatar-northstar">AC</span><div><strong>Alex Chen <span>Northstar</span></strong><p>{sources[0].excerpt}</p></div></div><div className="intake-plan"><h3><Sparkles size={15} /> What Relay connects</h3><p>5 messages → 3 unique accounts → 1 engineering issue → 2 paths forward.</p><span className="small muted">Seeded scenario with deterministic tag matching, not a live Slack import or AI extraction.</span></div><button className="button button-primary full-width" onClick={() => { setMatched(true); setTab("brief"); setModal(null); setToast("Matched 5 related messages across 3 accounts. Source-backed brief is ready."); }}>Build the decision brief <ArrowRight size={15} /></button></Modal>}
+  {modal === "intake" && <Modal title="One message. The whole picture." description="Incoming request · Simulated Slack integration" close={() => setModal(null)}><div className="intake-channel"><SourceIcon kind="slack" size={22} /><div><strong>#shared-northstar</strong><span>Apr 14, 2026 · 09:42</span></div><span className="badge badge-blue">{matched ? "Matched" : "New signal"}</span></div><div className="intake-message"><span className="avatar avatar-northstar">AC</span><div><strong>Alex Chen <span>Northstar</span></strong><p>{sources[0].excerpt}</p></div></div><div className="intake-plan"><h3><Sparkles size={15} /> What Relay connects</h3><p>5 messages → 3 unique accounts → 1 engineering issue → 2 paths forward.</p><span className="small muted">Seeded scenario with deterministic tag matching, not a live Slack import or AI extraction.</span></div><button className="button button-primary full-width" onClick={() => { setMatched(true); showDecision(); setModal(null); setToast("Matched 5 related messages across 3 accounts. Source-backed brief is ready."); }}>Build the decision brief <ArrowRight size={15} /></button></Modal>}
 
   {modal === "sources" && <Modal title="Every claim has a trail." description="9 preserved sample sources · No external systems connected" close={() => setModal(null)} wide><div className="source-search"><Search size={17} /><label className="sr-only" htmlFor="source-search">Search source documents</label><input id="source-search" value={sourceFilter} onChange={event => setSourceFilter(event.target.value)} placeholder="Search excerpts, documents, or channels…" /></div><div className="source-library">{filteredSources.map(item => <button key={item.id} onClick={() => openSource(item.id)}><span className={`source-type source-${item.kind}`}><SourceIcon kind={item.kind} /></span><span><strong>{item.title}</strong><small>{item.location} · {item.author}</small><p>{item.excerpt.slice(0, 140)}…</p></span><ArrowUpRight size={15} /></button>)}{!filteredSources.length && <p className="empty-state">No sample sources match “{sourceFilter}”. Try “export”, “renewal”, or “capacity”.</p>}</div></Modal>}
 

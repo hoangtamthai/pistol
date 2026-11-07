@@ -2,6 +2,8 @@
 
 ## Fixes
 
+- Native history updates the URL before React renders the new workspace view; browser checks must wait for inbox content, not only waitForURL, before counting rows. (E)
+
 - Check for .git before running Git commands; this workspace was initialized on branch main during the hackathon. (E)
 - ElevenLabs SDK declaration paths vary by version; locate the declaration with find or rg before reading a guessed hooks path. (E)
 - Installing Playwright may exceed a 120-second tool timeout; inspect package state and active npm processes before retrying with a longer timeout. (E)

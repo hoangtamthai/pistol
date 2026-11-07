@@ -15,6 +15,8 @@ npm run dev
 
 Open http://127.0.0.1:3000. The whole guided workflow works without credentials. Use **Replay demo** to start at the incoming request.
 
+**Signal inbox** is a dedicated page at `/inbox`: eight fictional Slack messages across Northstar, Meridian, Acme, Harbor, and Atlas. Search the original text or sender, filter by customer and review status, and inspect complete source messages. The five audit-export signals link to DEC-014; webhook, invoice, and SSO questions remain separate. Marking a message reviewed is a local triage state, not customer notification or resolution. Switching workspace views preserves the current draft and voice session; refreshing resets session state.
+
 ```bash
 npm test
 npm run typecheck
@@ -44,6 +46,7 @@ The backend exchanges the server-side API key for a WebRTC conversation token. T
 | Capability | Implementation |
 | --- | --- |
 | Decision workspace, sources, option selection | Working UI using synthetic data |
+| Signal inbox (`/inbox`) | Eight searchable/filterable messages across five customers, original-message detail, local review state, and links to the existing decision |
 | Related-request matching | Deterministic filtering on seeded problem tags |
 | Account deduplication and associated ARR | Computed from the matching account IDs |
 | Timeline and milestone displacement | Business-day calculation from explicit fixture assumptions |
@@ -73,7 +76,10 @@ Interview founders / CS leads about their most recent escalation: Which tools we
 
 ## Structure
 
-- `components/workspace.tsx`: decision, reply, evidence, approval, and follow-through UI.
+- `components/workspace.tsx`: shared navigation, decision, reply, evidence, approval, and follow-through UI.
+- `components/signal-inbox.tsx`: full-page multi-customer inbox, filters, source detail, and review controls.
+- `lib/inbox.ts`: inbox fixtures, customer/status filtering, and explicit decision associations.
+- `app/inbox/page.tsx` and `app/inbox.css`: inbox route and responsive inbox styles.
 - `components/voice-panel.tsx`: ElevenLabs session, transcript, UI tools, guided fallback.
 - `lib/demo.ts`: synthetic sources, matching, planning, templates, and gated outcome logic.
 - `lib/*.test.ts`: logic, provenance, and session-endpoint checks.
