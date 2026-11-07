@@ -2,6 +2,16 @@
 
 ## Fixes
 
+- Scope compact-sidebar footer hiding to direct children; hiding every .sidebar-note also hides empty-list and no-match messages on narrow screens. (E)
+
+- Check for an active next build before production validation in this shared checkout; concurrent agents can hold the build lock, so do not delete the lock or interrupt their build. (E)
+
+- Re-read the current /context rewrite before navigation checks or reading demo files: concurrent cleanup replaced the founder demo with records.html and removed index.html. (E)
+
+- Scope waitlist alert locators to the named form; Next.js also renders an alert for route announcements. (E)
+
+- Landing-page browser checks should navigate with a 60-second timeout and waitUntil: 'domcontentloaded'; Next dev compilation and external font loading can exceed a 15-second load wait. (E)
+
 - Recheck file length after deletions before requesting an old read offset; records.js no longer has the earlier line ranges. (E)
 
 - Test disabled fieldsets through a descendant submit button; Playwright isDisabled() on the fieldset itself does not reflect disabled form controls. (E)

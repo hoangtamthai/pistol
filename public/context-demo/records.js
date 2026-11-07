@@ -17,7 +17,7 @@ async function api(url, options = {}) {
 function setBusy(value) {
   busy = value;
   $('#content').setAttribute('aria-busy', String(value));
-  document.querySelectorAll('fieldset, #refresh, #retry').forEach(element => { element.disabled = value; });
+  document.querySelectorAll('fieldset, #refresh, #refresh-issues, #retry').forEach(element => { element.disabled = value; });
 }
 function showError(error) {
   clearTimeout(timer);
@@ -32,13 +32,19 @@ function setHeading(title, description, status) {
   $('#phase-status').textContent = status;
   document.title = `${title} · Context`;
 }
-async function load() {
+async function load(refreshList = false) {
+  if (!snapshot || refreshList) snapshot = await api('/api/issues');
+  renderSidebar();
   if (issueId) {
     view = await api(`/api/issues?issue=${encodeURIComponent(issueId)}`);
+    snapshot.issues = snapshot.issues.map(issue => issue.id === issueId ? view.issue : issue);
+    renderSidebar();
     renderLifecycle();
+  } else if (isNew) {
+    renderIntake();
   } else {
-    snapshot = await api('/api/issues');
-    if (isNew) renderIntake(); else renderList();
+    setHeading('Your issue workspace', 'Select an issue on the left to open its lifecycle, or submit a new report.', `${snapshot.issues.length} saved issues`);
+    $('#content').innerHTML = '<section class="records-card records-empty"><h2>Select an issue</h2><p>Its report, evidence, human checks, and recovery progress will appear here.</p></section>';
   }
   $('#content').setAttribute('aria-busy', 'false');
 }
@@ -85,18 +91,12 @@ function renderIntake() {
     mutate({ ...Object.fromEntries(new FormData(event.currentTarget)), action: 'intake', externalId: crypto.randomUUID(), sourceRevision: '1', source: 'form', sentiment: 'unknown', issueType: 'malfunction' });
   });
 }
-function renderList() {
-  setHeading('All issues', 'Every saved issue in this workspace, including existing records and new submissions.', `${snapshot.issues.length} saved issues`);
-  $('#issues-link').setAttribute('aria-current', 'page');
-  $('#content').innerHTML = `<section class="records-card"><div class="records-filter"><label>Search issues<input id="search" type="search" placeholder="Title, owner, status, or issue ID" value="${esc(search)}"></label><button type="button" class="button-secondary" id="refresh">Refresh issues</button></div><div id="issue-rows"></div></section>`;
-  $('#search').addEventListener('input', event => { search = event.target.value; renderRows(); });
-  $('#refresh').addEventListener('click', refresh);
-  renderRows();
-}
-function renderRows() {
+function renderSidebar() {
   const query = search.trim().toLowerCase();
   const issues = snapshot.issues.filter(issue => `${issue.title} ${issue.id} ${issue.owner} ${humanize(issue.state)}`.toLowerCase().includes(query)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  $('#issue-rows').innerHTML = issues.length ? `<table class="records-table"><caption>${issues.length} of ${snapshot.issues.length} saved issues · newest first</caption><thead><tr><th scope="col">Issue</th><th scope="col">Status</th><th scope="col">Severity</th><th scope="col">Owner</th><th scope="col">Created</th><th scope="col">Action</th></tr></thead><tbody>${issues.map(issue => `<tr><td><strong>${esc(issue.title)}</strong><small>${esc(issue.id)}</small><small>${esc(issue.environment)}</small></td><td><span class="records-state">${esc(humanize(issue.state))}</span></td><td>${esc(issue.severity)}</td><td>${esc(issue.owner)}</td><td>${esc(new Date(issue.createdAt).toLocaleString())}</td><td><a href="${issueURL(issue.id)}">Open lifecycle<span class="records-form-note"> for ${esc(issue.title)}</span></a></td></tr>`).join('')}</tbody></table>` : `<p class="records-empty">${snapshot.issues.length ? 'No matching issues. Clear your search to see all records.' : 'No issues yet. Submit your first issue to start its lifecycle.'}</p>`;
+  $('#issue-count').textContent = `${issues.length} of ${snapshot.issues.length} issues`;
+  $('#issue-list').setAttribute('aria-busy', 'false');
+  $('#issue-list').innerHTML = issues.length ? `<ul>${issues.map(issue => `<li><a class="sidebar-issue" href="${issueURL(issue.id)}" aria-label="${esc(issue.title)}" ${issue.id === issueId ? 'aria-current="page"' : ''}><span class="sidebar-issue-meta"><span>${esc(issue.severity)}</span><span class="records-state">${esc(humanize(issue.state))}</span></span><strong>${esc(issue.title)}</strong><small>${esc(issue.owner)} · ${esc(issue.environment)}</small><small class="sidebar-issue-id">${esc(issue.id)}</small></a></li>`).join('')}</ul>` : `<p class="sidebar-note">${snapshot.issues.length ? 'No matching issues. Clear your search to see all records.' : 'No issues yet. Submit your first issue to start its lifecycle.'}</p>`;
 }
 function reportDetails() {
   return `<div class="records-reports">${view.reports.map(report => `<article><h3>${esc(report.externalId)} · revision ${esc(report.sourceRevision)}</h3><p><strong>Original report</strong><br>${esc(report.text)}</p><p><strong>Comment</strong><br>${esc(report.comment || 'No comment supplied.')}</p><p class="records-form-note">${report.fixture ? 'Synthetic fixture' : 'Manual intake'} · ${esc(report.source)} · ${esc(report.environment)}</p></article>`).join('')}</div>`;
@@ -115,8 +115,9 @@ function renderLifecycle() {
   $('#content').innerHTML = `<section class="records-workflow" aria-label="Issue lifecycle"><svg class="connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M11 25H89V74H11" vector-effect="non-scaling-stroke"/></svg>${nodes.map(([title, subtitle, x, y], index) => `<button type="button" data-stage="${index}" class="node ${index < step ? 'done' : index > step ? 'future' : canAdvance ? 'active' : 'waiting'} ${finished && index === 7 ? 'verified' : ''}" style="left:${x}%;top:${y}%"><span class="node-step">${index + 1}</span><span class="node-top"><span class="node-ref">${index === 0 ? 'CUSTOMER REPORT' : index === 5 ? 'HUMAN CHECK' : 'ISSUE LIFECYCLE'}</span></span><h3>${esc(title)}</h3><p>${esc(subtitle)}</p><span class="node-bottom"><span class="node-state ${index < step ? 'done' : index === step && !canAdvance ? 'waiting' : ''}">${index < step ? 'Recorded' : index > step ? 'Not reached' : canAdvance ? 'Processing' : 'Human input required'}</span></span></button>`).join('')}</section>
     <section class="records-dock" aria-label="Automatic progress" role="status"><div><span class="step-counter">STEP ${step + 1} / 9</span><strong>${esc(lifecycle.title)}</strong><p>${esc(finished ? lifecycle.reason : canAdvance ? 'Continuing automatically. No Next or Continue button is needed.' : lifecycle.reason)}</p></div><div class="records-dock-actions">${!canAdvance && !finished ? '<a class="button-primary" href="#human-gate">Review required check</a>' : ''}<button type="button" id="view-report" class="button-secondary">View report & comment</button></div></section>
     <section class="records-card records-gate" id="human-gate" tabindex="-1" ${canAdvance || finished ? 'hidden' : ''}>${canAdvance || finished ? '' : gateContent()}</section>
-    <div class="records-actions"><a href="/context/issues" class="button-secondary">All issues</a><a href="/issues?issue=${encodeURIComponent(issue.id)}" class="button-secondary">Full evidence workspace</a><button id="refresh" type="button" class="button-secondary">Refresh saved state</button></div>`;
+    <div class="records-actions"><button type="button" id="view-evidence" class="button-secondary">View all evidence</button><button id="refresh" type="button" class="button-secondary">Refresh saved state</button></div>`;
   $('#view-report').addEventListener('click', () => openDetail('Original report and comment', reportDetails()));
+  $('#view-evidence').addEventListener('click', () => openDetail('Saved evidence', `${reportDetails()}${view.evidence.map(item => `<article><h3>${esc(item.title)}</h3><pre class="records-evidence">${esc(item.text)}</pre></article>`).join('')}`));
   $('#refresh').addEventListener('click', refresh);
   document.querySelectorAll('[data-stage]').forEach(button => button.addEventListener('click', () => {
     const stage = Number(button.dataset.stage);
@@ -140,12 +141,12 @@ function gateContent() {
   if (lifecycle.step === 7) {
     const unverified = view.reports.find(report => !report.accountId && report.source !== 'public_web');
     const identity = unverified ? `<details class="records-identity" ${view.affected.length ? '' : 'open'}><summary>Verify the reporting account</summary><form class="records-form" data-command="map_account"><fieldset><input type="hidden" name="reportId" value="${esc(unverified.id)}"><label>Verified account from the local fixture register<select name="accountId">${view.accounts.map(account => `<option value="${esc(account.id)}">${esc(account.name)} · fixture</option>`).join('')}</select></label><label>Identity verification basis<input name="basis" required maxlength="500" placeholder="Verified support contact or authorized account record"></label><button class="button-primary">Record verified identity</button></fieldset></form></details>` : '';
-    return `<h2>Check the customer's recovery</h2><p>Ask the customer to retry their original workflow. No message is sent by this app. Record a separate, explicit test reply for each verified affected account.</p>${identity}${!view.affected.length ? '<p>No verified affected account. Public usernames cannot be used as customer identities. Add verified support evidence in the full workspace before confirming recovery.</p>' : ''}${view.affected.map(account => {
+    return `<h2>Check the customer's recovery</h2><p>Ask the customer to retry their original workflow. No message is sent by this app. Record a separate, explicit test reply for each verified affected account.</p>${identity}${!view.affected.length ? '<p>No verified affected account. Public usernames cannot be used as customer identities. Verify a reporting account using the form above before confirming recovery. Public-only reports cannot establish account identity.</p>' : ''}${view.affected.map(account => {
       const outcome = view.outcomes.find(item => item.accountId === account.id);
       return `<section class="records-account"><h3>${esc(account.name)} <span class="records-state ${outcome?.state === 'confirmed' ? 'confirmed' : ''}">${esc(outcome?.state || 'Awaiting reply')}</span></h3>${outcome?.state === 'confirmed' ? '' : `<form class="records-form" data-command="workflow_confirm"><fieldset><input type="hidden" name="accountId" value="${esc(account.id)}"><label>Customer response<select name="state"><option value="confirmed">Customer confirms recovery</option><option value="persists">Problem persists · reopen</option></select></label><label>Customer reply / evidence<textarea name="basis" required maxlength="1000" placeholder="Record a sanitized test reply, not an assumption based on deployment."></textarea></label><label class="check-label"><input name="reviewed" type="checkbox" required>I reviewed this separate customer response for the selected account.</label><button class="button-primary">Record customer reply</button></fieldset></form>`}</section>`;
     }).join('')}<details class="records-identity"><summary>Problem persists? Record a revised investigation</summary><p>A revised investigation invalidates any pending approval and prepares a new fix for human review.</p><form class="records-form" data-command="workflow_investigation"><fieldset><label>Investigation findings<textarea name="findings" required maxlength="1000"></textarea></label><label>Proposed fix and delivery tradeoff<textarea name="fix" required maxlength="1000"></textarea></label><label>Verification plan and recorded results<textarea name="checks" required maxlength="1000"></textarea></label><button class="button-primary">Save revised investigation</button></fieldset></form></details>`;
   }
-  return `<h2>More context is needed</h2><p>${esc(lifecycle.reason)}</p><a href="/issues?issue=${encodeURIComponent(issue.id)}">Open the full evidence workspace</a>`;
+  return `<h2>More context is needed</h2><p>${esc(lifecycle.reason)}</p><p>Review the original report and saved evidence before continuing. Missing source evidence must be supplied before this workflow can advance.</p>`;
 }
 function bindGate() {
   document.querySelectorAll('[data-command]').forEach(form => form.addEventListener('submit', event => {
@@ -166,11 +167,19 @@ function openDetail(title, html) {
 async function refresh() {
   if (busy || pendingRequest) return;
   setBusy(true); clearError();
-  try { await load(); } catch (error) { showError(error); }
+  try { await load(true); } catch (error) { showError(error); }
   finally { setBusy(false); schedule(); }
 }
 $('#close-detail').addEventListener('click', () => dialog.close());
 dialog.addEventListener('close', () => { if (lastTrigger?.isConnected) lastTrigger.focus(); schedule(); });
 document.addEventListener('visibilitychange', schedule);
 $('#retry').addEventListener('click', () => pendingRequest ? mutate(null, true) : refresh());
+$('#refresh-issues').addEventListener('click', async () => {
+  if (busy || pendingRequest) return;
+  clearTimeout(timer); setBusy(true); clearError();
+  try { snapshot = await api('/api/issues'); renderSidebar(); }
+  catch (error) { showError(error); }
+  finally { setBusy(false); schedule(); }
+});
+$('#search').addEventListener('input', event => { search = event.target.value; if (snapshot) renderSidebar(); });
 refresh();
