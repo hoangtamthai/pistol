@@ -1,12 +1,12 @@
 # Context main app and demos
 
-The root opens `/context`, rewriting to `public/context-demo/index.html`. The supplied HTML, CSS, and JavaScript run directly, isolated from the older Pistol styles. The new saved-issue pages rewrite to `records.html` and use the authenticated SQLite API. Use normal anchors, not client-side Next Links, when navigating to these static documents.
+The root opens `/context`, rewriting to `public/context-demo/index.html`. The supplied HTML, CSS, and JavaScript run directly, isolated from the older Pistol styles. The new saved-issue pages rewrite to `records.html` and use the password-free SQLite API. Use normal anchors, not client-side Next Links, when navigating to these static documents.
 
-The original `Context-UI-Handoff.zip` is unchanged. The adapted source of truth is `public/context-demo/`, not the original standalone export inside the ZIP. No external integrations, calls, fulfillment, patches, deployments, or customer messages are performed. Saved records require the existing local workspace sign-in.
+The original `Context-UI-Handoff.zip` is unchanged. The adapted source of truth is `public/context-demo/`, not the original standalone export inside the ZIP. No external integrations, calls, fulfillment, patches, deployments, or customer messages are performed. Saved records need no sign-in. Anyone who can reach the app can read and edit issues; keep it local. Paid ElevenLabs calls retain their optional provider sign-in.
 
 ## Saved issues
 
-- `/context/issues/new`: save a title, environment, operational severity, description, and separate optional comment. Sanitization, source deduplication, authentication, origin checks, and idempotency apply.
+- `/context/issues/new`: save a title, environment, operational severity, description, and separate optional comment. Sanitization, source deduplication, origin checks, and idempotency apply.
 - `/context/issues`: every database issue, searchable by title, owner, state, or ID. Existing records are preserved.
 - `/context/issues/:id`: saved lifecycle. It starts automatically and advances permitted steps every 1.5 seconds, with no Next or Continue click after human input.
 - Human gates: assignment; missing investigation findings and fix/verification plan; acknowledgment of the exact fix plan; simulated deployment evidence; verified customer identity and separate customer replies. The server enforces these gates, not just the UI.
@@ -57,18 +57,18 @@ If Playwright is already resolvable from this repository, omit `PLAYWRIGHT_MODUL
 Use a disposable database, not your main workspace. Start a second local server after building:
 
 ```sh
-RELAY_DB_PATH="$(mktemp -d)/issues.sqlite" RELAY_WORKSPACE_PASSWORD=local-browser-test npm start -- --port 3101
+RELAY_DB_PATH="$(mktemp -d)/issues.sqlite" RELAY_WORKSPACE_PASSWORD= npm start -- --port 3101
 ```
 
 After Ready, run in another terminal:
 
 ```sh
-CONTEXT_TEST_PASSWORD=local-browser-test PLAYWRIGHT_MODULE=/absolute/path/to/playwright npm run test:context-workspace
-CONTEXT_TEST_PASSWORD=local-browser-test PLAYWRIGHT_MODULE=/absolute/path/to/playwright CONTEXT_BROWSER=firefox npm run test:context-workspace
+PLAYWRIGHT_MODULE=/absolute/path/to/playwright npm run test:context-workspace
+PLAYWRIGHT_MODULE=/absolute/path/to/playwright CONTEXT_BROWSER=firefox npm run test:context-workspace
 ```
 
-This script defaults to port 3101, accepts the same URL/browser/screenshot overrides, and creates test issues. It checks main navigation, sign-in return paths, submission and redacted comments, retry after a lost save response, database listing, all automatic transitions and human gates, recovery, reload persistence, and HTML escaping. Stop the disposable server after use.
+This script defaults to port 3101, accepts the same URL/browser/screenshot overrides, and creates test issues. It checks main navigation, password-free access, submission and redacted comments, retry after a lost save response, database listing, all automatic transitions and human gates, recovery, reload persistence, and HTML escaping. Stop the disposable server after use.
 
-`lib/lifecycle.test.ts` covers SQLite reopen, optional comment validation, gate enforcement, approval invalidation, concurrent step conflicts, account-specific confirmation, and safe login redirects. The existing API tests cover authentication, CSRF, and request limits.
+`lib/lifecycle.test.ts` covers SQLite reopen, optional comment validation, gate enforcement, approval invalidation, concurrent step conflicts, account-specific confirmation, and safe login redirects. The existing API tests cover password-free issue reads/writes/receipts, retained provider authentication, origin checks, and request limits.
 
 Mobile layouts and real external actions are intentionally out of scope.
