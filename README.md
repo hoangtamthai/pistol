@@ -11,13 +11,13 @@ Requires **Node.js 24+** for the built-in SQLite API. No database service or new
 ```bash
 npm install
 cp .env.example .env.local
-# Edit .env.local: set RELAY_WORKSPACE_PASSWORD to a unique password of at least 16 characters.
+# Edit .env.local: set RELAY_WORKSPACE_PASSWORD to at least 4 characters; special characters are optional.
 npm run dev
 ```
 
-Open the address printed by Next.js, normally http://127.0.0.1:3000. The root opens `/issues`, which redirects to `/login` until signed in. There is no default password. Sessions expire after eight hours; changing the password revokes them. The original fictional demo is publicly readable, but funded voice sessions require workspace sign-in.
+Open the address printed by Next.js, normally http://127.0.0.1:3000. The root opens `/issues`, which redirects to `/login` until signed in. There is no default password. Four-letter passwords are accepted for local use; longer unique passwords are recommended. Sessions expire after eight hours; changing the password revokes them. The original fictional demo is publicly readable, but funded voice sessions require workspace sign-in.
 
-SQLite defaults to `data/relay.sqlite`. Set `RELAY_DB_PATH` to change it. Reports, revisions, reviews, evidence, proposals, simulated Jira mappings, scenarios, account outcomes, completed intake jobs, and audit events survive browser and server restarts. The database and sidecar files are ignored by Git; the database file is owner-readable/writable only.
+SQLite defaults to `data/relay.sqlite`. Set `RELAY_DB_PATH` to change it. Reports, revisions, reviews, evidence, proposals, simulated Jira mappings, scenarios, account outcomes, completed intake jobs, and audit events survive browser and server restarts. The database and sidecar files are tracked by Git at the operator's request. Keep only sanitized test data in them: committing exposes their contents to repository readers. The local database file is owner-readable/writable only; those permissions do not protect committed copies.
 
 ```bash
 npm test

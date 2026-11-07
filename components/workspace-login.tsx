@@ -5,7 +5,7 @@ import { useState } from "react";
 export default function WorkspaceLogin({ configured }: { configured: boolean }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  return <main className="case-login"><span className="eyebrow">RELAY · LOCAL WORKSPACE</span><h1>Evidence first.<br />Decisions together.</h1><p>Sign in to review customer issues, coordinate actions, and track recovery.</p>{!configured && <div className="case-notice"><strong>One-time setup required</strong><p>Set <code>RELAY_WORKSPACE_PASSWORD</code> to a unique password of at least 16 characters in <code>.env.local</code>, then restart the app. There is no default password.</p></div>}<form onSubmit={async event => {
+  return <main className="case-login"><span className="eyebrow">RELAY · LOCAL WORKSPACE</span><h1>Evidence first.<br />Decisions together.</h1><p>Sign in to review customer issues, coordinate actions, and track recovery.</p>{!configured && <div className="case-notice"><strong>One-time setup required</strong><p>Set <code>RELAY_WORKSPACE_PASSWORD</code> to a password of at least 4 characters (plain letters are enough) in <code>.env.local</code>, then restart the app. There is no default password.</p></div>}<form onSubmit={async event => {
     event.preventDefault(); setBusy(true); setError("");
     const password = new FormData(event.currentTarget).get("password");
     try {

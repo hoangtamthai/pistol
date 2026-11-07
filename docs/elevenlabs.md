@@ -70,7 +70,7 @@ cp .env.example .env.local
 Set:
 
 ```dotenv
-RELAY_WORKSPACE_PASSWORD=your_unique_password_at_least_16_characters
+RELAY_WORKSPACE_PASSWORD=your_password_at_least_4_characters
 ELEVENLABS_API_KEY=your_server_side_key
 ELEVENLABS_AGENT_ID=your_private_agent_id
 ```

@@ -4,14 +4,15 @@ import { CaseError } from "./issues";
 
 export const SESSION_COOKIE = "relay-session";
 export const SESSION_SECONDS = 8 * 60 * 60;
-export function authConfigured() { return (process.env.RELAY_WORKSPACE_PASSWORD?.length || 0) >= 16; }
+const MIN_PASSWORD_LENGTH = 4;
+export function authConfigured() { return (process.env.RELAY_WORKSPACE_PASSWORD?.length || 0) >= MIN_PASSWORD_LENGTH; }
 function digest(value: string) { return createHash("sha256").update(value).digest(); }
 export function passwordMatches(password: string) {
   return authConfigured() && timingSafeEqual(digest(password), digest(process.env.RELAY_WORKSPACE_PASSWORD!));
 }
 function sign(value: string) { return createHmac("sha256", process.env.RELAY_WORKSPACE_PASSWORD!).update(`relay-local-session:${value}`).digest("hex"); }
 export function createSession(time = Date.now()) {
-  if (!authConfigured()) throw new CaseError("Set RELAY_WORKSPACE_PASSWORD to at least 16 characters in .env.local.", 503);
+  if (!authConfigured()) throw new CaseError(`Set RELAY_WORKSPACE_PASSWORD to at least ${MIN_PASSWORD_LENGTH} characters in .env.local.`, 503);
   const expires = String(time + SESSION_SECONDS * 1000);
   return `${expires}.${sign(expires)}`;
 }
@@ -22,7 +23,7 @@ export function validSession(token: string | undefined, time = Date.now()) {
   return timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(sign(expires), "hex"));
 }
 export function requireSession(request: NextRequest) {
-  if (!authConfigured()) throw new CaseError("Set RELAY_WORKSPACE_PASSWORD (at least 16 characters) in .env.local and restart.", 503);
+  if (!authConfigured()) throw new CaseError(`Set RELAY_WORKSPACE_PASSWORD (at least ${MIN_PASSWORD_LENGTH} characters) in .env.local and restart.`, 503);
   if (!validSession(request.cookies.get(SESSION_COOKIE)?.value)) throw new CaseError("Sign in to the local workspace.", 401);
 }
 export function requireOrigin(request: NextRequest) {
