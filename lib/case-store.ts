@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { chmodSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { accounts as sampleAccounts, sources, requests } from "./demo";
+import { providers } from "./providers";
 import { issueLifecycle } from "./lifecycle";
 import { affectedAccounts, calculateScenario, CaseError, issueStates, object, oneOf, sanitize, text, WORKSPACE_ID, type Account, type Issue, type Proposal, type Relationship, type Report, type ScenarioInput, type Snapshot } from "./issues";
 
@@ -117,7 +118,7 @@ export class CaseStore {
     if (body.accountId) throw new CaseError("New reports have no verified account. Map identity separately after review.");
     const externalId = text(body.externalId, "External ID", 100);
     const sourceRevision = text(body.sourceRevision, "Source revision", 40);
-    const source = oneOf(body.source, ["form", "helpdesk", "email", "slack", "call", "public_web"], "source");
+    const source = oneOf(body.source, [...new Set(["form", "helpdesk", "email", "slack", "call", "public_web", ...providers.map(provider => provider.id)])], "source");
     const content = sanitize(text(body.text, "Report"));
     const comment = body.comment === undefined || body.comment === "" ? "" : sanitize(text(body.comment, "Comment", 2000));
     const environment = sanitize(text(body.environment, "Environment", 80));

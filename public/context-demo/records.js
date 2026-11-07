@@ -6,7 +6,19 @@ const path = location.pathname;
 const isNew = path === '/context/issues/new';
 const issueId = !isNew && path.startsWith('/context/issues/') ? decodeURIComponent(path.slice('/context/issues/'.length)) : null;
 const dialog = $('#record-detail');
-let snapshot, view, timer, busy = false, pendingRequest = null, search = '', lastTrigger = null;
+const legacySources = { form: 'Web form', helpdesk: 'Helpdesk', email: 'Email', slack: 'Slack', call: 'Phone call', public_web: 'Public web' };
+const sourceMarks = { form: 'Fm', helpdesk: 'Hd', email: 'Em', call: 'Ca', public_web: 'Pw' };
+function sourceInfo(id) {
+  const connector = connectors.find(item => item.id === id);
+  return { id, name: connector?.name || legacySources[id] || humanize(id), mark: connector?.mark || sourceMarks[id] || String(id).slice(0, 2) };
+}
+const sourceBadge = id => { const info = sourceInfo(id); return `<span class="source-badge"><span class="source-mark source-${esc(info.id)}" aria-hidden="true">${esc(info.mark)}</span>${esc(info.name)}</span>`; };
+function issueSource(issueId) {
+  const reportIds = snapshot.relationships.filter(edge => edge.type === 'REPORTS' && edge.status === 'confirmed' && edge.toId === issueId).map(edge => edge.fromId);
+  const reports = snapshot.reports.filter(report => reportIds.includes(report.id)).sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
+  return { source: reports[0]?.source || 'form', externalId: reports[0]?.externalId || '', count: reports.length };
+}
+let snapshot, connectors = [], syncNote = '', view, timer, busy = false, pendingRequest = null, search = '', lastTrigger = null;
 
 async function api(url, options = {}) {
   const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(15000), ...options });
@@ -34,10 +46,10 @@ function setHeading(title, description, status) {
 }
 async function load() {
   if (issueId) {
-    view = await api(`/api/issues?issue=${encodeURIComponent(issueId)}`);
+    [view, { connectors }] = await Promise.all([api(`/api/issues?issue=${encodeURIComponent(issueId)}`), api('/api/connectors')]);
     renderLifecycle();
   } else {
-    snapshot = await api('/api/issues');
+    [snapshot, { connectors }] = await Promise.all([api('/api/issues'), api('/api/connectors')]);
     if (isNew) renderIntake(); else renderList();
   }
   $('#content').setAttribute('aria-busy', 'false');
@@ -86,20 +98,33 @@ function renderIntake() {
   });
 }
 function renderList() {
-  setHeading('All issues', 'Every saved issue in this workspace, including existing records and new submissions.', `${snapshot.issues.length} saved issues`);
   $('#issues-link').setAttribute('aria-current', 'page');
-  $('#content').innerHTML = `<section class="records-card"><div class="records-filter"><label>Search issues<input id="search" type="search" placeholder="Title, owner, status, or issue ID" value="${esc(search)}"></label><button type="button" class="button-secondary" id="refresh">Refresh issues</button></div><div id="issue-rows"></div></section>`;
+  const pulled = connectors.reduce((total, item) => total + item.pulled, 0), available = connectors.reduce((total, item) => total + item.available, 0);
+  $('#content').innerHTML = `<section class="records-card connectors-card" aria-labelledby="connectors-title"><div class="connectors-head"><div><p class="eyebrow">CONNECTED SOURCES · SIMULATED</p><h2 id="connectors-title">Tickets from every tool your customers use</h2><p class="records-form-note">${connectors.length} connectors · ${pulled} of ${available} sample tickets pulled into this workspace.</p></div><button type="button" class="button-primary" id="sync-connectors">${pulled < available ? 'Pull tickets from all sources' : 'Sync again'}</button></div><ul class="connector-grid">${connectors.map(item => `<li class="${item.pulled ? 'is-synced' : ''}"><span class="source-mark source-${esc(item.id)}" aria-hidden="true">${esc(item.mark)}</span><span><strong>${esc(item.name)}</strong><small>${esc(item.category)} · ${item.pulled}/${item.available} ${esc(item.noun)}${item.available === 1 ? '' : 's'} pulled</small></span><span class="connector-state">${item.pulled ? 'Synced' : 'Ready'}</span></li>`).join('')}</ul><p class="connector-note" role="status">${esc(syncNote)}</p></section>
+  <section class="records-card"><div class="records-filter"><label>Search issues<input id="search" type="search" placeholder="Title, source, owner, status, or issue ID" value="${esc(search)}"></label><button type="button" class="button-secondary" id="refresh">Refresh issues</button></div><div id="issue-rows"></div></section>`;
   $('#search').addEventListener('input', event => { search = event.target.value; renderRows(); });
   $('#refresh').addEventListener('click', refresh);
+  $('#sync-connectors').addEventListener('click', syncConnectors);
   renderRows();
+}
+async function syncConnectors() {
+  if (busy) return;
+  setBusy(true); clearError();
+  document.querySelector('#sync-connectors').disabled = true;
+  try {
+    const result = await api('/api/connectors', { method: 'POST' });
+    syncNote = result.pulled ? `Pulled ${result.pulled} new ticket${result.pulled === 1 ? '' : 's'} from ${result.connectors.filter(item => item.pulled).length} sources. Each one keeps its original wording and source reference.` : 'Already up to date. Re-syncing never duplicates a ticket.';
+    await load();
+  } catch (error) { showError(error); }
+  finally { setBusy(false); }
 }
 function renderRows() {
   const query = search.trim().toLowerCase();
-  const issues = snapshot.issues.filter(issue => `${issue.title} ${issue.id} ${issue.owner} ${humanize(issue.state)}`.toLowerCase().includes(query)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  $('#issue-rows').innerHTML = issues.length ? `<table class="records-table"><caption>${issues.length} of ${snapshot.issues.length} saved issues · newest first</caption><thead><tr><th scope="col">Issue</th><th scope="col">Status</th><th scope="col">Severity</th><th scope="col">Owner</th><th scope="col">Created</th><th scope="col">Action</th></tr></thead><tbody>${issues.map(issue => `<tr><td><strong>${esc(issue.title)}</strong><small>${esc(issue.id)}</small><small>${esc(issue.environment)}</small></td><td><span class="records-state">${esc(humanize(issue.state))}</span></td><td>${esc(issue.severity)}</td><td>${esc(issue.owner)}</td><td>${esc(new Date(issue.createdAt).toLocaleString())}</td><td><a href="${issueURL(issue.id)}">Open lifecycle<span class="records-form-note"> for ${esc(issue.title)}</span></a></td></tr>`).join('')}</tbody></table>` : `<p class="records-empty">${snapshot.issues.length ? 'No matching issues. Clear your search to see all records.' : 'No issues yet. Submit your first issue to start its lifecycle.'}</p>`;
+  const issues = snapshot.issues.filter(issue => `${issue.title} ${issue.id} ${issue.owner} ${humanize(issue.state)} ${sourceInfo(issueSource(issue.id).source).name} ${issueSource(issue.id).externalId}`.toLowerCase().includes(query)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  $('#issue-rows').innerHTML = issues.length ? `<table class="records-table"><caption>${issues.length} of ${snapshot.issues.length} saved issues · newest first</caption><thead><tr><th scope="col">Issue</th><th scope="col">Source</th><th scope="col">Status</th><th scope="col">Severity</th><th scope="col">Owner</th><th scope="col">Created</th><th scope="col">Action</th></tr></thead><tbody>${issues.map(issue => `<tr><td><strong>${esc(issue.title)}</strong><small>${esc(issue.id)}</small><small>${esc(issue.environment)}</small></td><td>${(() => { const origin = issueSource(issue.id); return `${sourceBadge(origin.source)}${origin.externalId && origin.source !== 'form' ? `<small>${esc(origin.externalId.replace(/^[a-z]+:/, ''))}</small>` : ''}${origin.count > 1 ? `<small>+${origin.count - 1} more report${origin.count > 2 ? 's' : ''}</small>` : ''}`; })()}</td><td><span class="records-state">${esc(humanize(issue.state))}</span></td><td>${esc(issue.severity)}</td><td>${esc(issue.owner)}</td><td>${esc(new Date(issue.createdAt).toLocaleString())}</td><td><a href="${issueURL(issue.id)}">Open lifecycle<span class="records-form-note"> for ${esc(issue.title)}</span></a></td></tr>`).join('')}</tbody></table>` : `<p class="records-empty">${snapshot.issues.length ? 'No matching issues. Clear your search to see all records.' : 'No issues yet. Submit your first issue to start its lifecycle.'}</p>`;
 }
 function reportDetails() {
-  return `<div class="records-reports">${view.reports.map(report => `<article><h3>${esc(report.externalId)} · revision ${esc(report.sourceRevision)}</h3><p><strong>Original report</strong><br>${esc(report.text)}</p><p><strong>Comment</strong><br>${esc(report.comment || 'No comment supplied.')}</p><p class="records-form-note">${report.fixture ? 'Synthetic fixture' : 'Manual intake'} · ${esc(report.source)} · ${esc(report.environment)}</p></article>`).join('')}</div>`;
+  return `<div class="records-reports">${view.reports.map(report => `<article>${sourceBadge(report.source)}<h3>${esc(report.externalId)} · revision ${esc(report.sourceRevision)}</h3><p><strong>Original report</strong><br>${esc(report.text)}</p><p><strong>Comment</strong><br>${esc(report.comment || 'No comment supplied.')}</p><p class="records-form-note">${report.fixture ? 'Synthetic fixture' : 'Manual intake'} · ${esc(report.source)} · ${esc(report.environment)}</p></article>`).join('')}</div>`;
 }
 function renderLifecycle() {
   const { issue, lifecycle } = view;

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FFFFFF">
+  <meta name="description" content="Watch Context agents check every connected source, research and brainstorm each ticket, prepare fixes, and wait for your approval.">
+  <title>Autopilot flow · Context</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/context-demo/styles.css">
+  <link rel="stylesheet" href="/context-demo/records.css">
+  <link rel="stylesheet" href="/context-demo/flow.css">
+  <script src="/context-demo/flow.js" defer></script>
+</head>
+<body class="flow-page">
+  <header class="app-header">
+    <a class="brand" href="/context" aria-label="Context home"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>context<span class="brand-divider"></span><span class="brand-caption">Customer operations</span></a>
+    <nav class="scenario-tabs" aria-label="Demo scenario"><button type="button" data-href="/context">Founder overview</button><button type="button" data-href="/context/issues">Issue lifecycle</button><button type="button" aria-current="page" class="is-current">Autopilot flow</button></nav>
+    <nav class="records-nav" aria-label="Workspace"><a href="/context/issues">All issues</a><a href="/context/issues/new" class="button-primary">Submit issue</a></nav>
+  </header>
+  <main class="workspace flow-workspace" id="flow-main">
+    <section class="workspace-heading"><div><p class="eyebrow" id="flow-eyebrow">SCENARIO 03 / AUTOPILOT</p><h1 id="flow-title">Loading tickets…</h1><p id="flow-subtitle">Reading connected sources.</p></div><span id="flow-status" class="phase-status">Ready to play</span></section>
+    <section class="flow-stage" id="flow-stage" aria-live="polite"></section>
+    <div class="playback-dock" aria-label="Demo playback"><button type="button" class="reset-button" id="flow-reset" aria-label="Restart this scenario" title="Restart this scenario">↺</button><div class="dock-divider"></div><div class="step-info"><span class="step-counter" id="flow-counter"></span><strong id="flow-step-title"></strong></div><div class="step-progress" id="flow-progress"></div><button type="button" class="next-button" id="flow-back">Back</button><button type="button" class="next-button" id="flow-next">Next</button><button type="button" class="primary-button" id="flow-play">Play demo</button></div>
+    <div class="workspace-footnote"><span>Sample data · Simulated connectors and agents · No messages sent, tickets changed, or code deployed</span><a href="/context/issues">See pulled tickets in All issues ↗</a></div>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+</body>
+</html>

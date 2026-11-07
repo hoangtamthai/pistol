@@ -3,7 +3,7 @@ import Workspace from "@/components/workspace";
 
 export const metadata: Metadata = {
   title: "Signal inbox · Pistol",
-  description: "Customer requests across five fictional accounts, with preserved conversations and linked decisions.",
+  description: "Customer requests pulled from Slack, Jira, Zendesk, and seven more tools, with preserved conversations and linked decisions.",
 };
 
 export default function InboxPage() {

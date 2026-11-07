@@ -186,3 +186,42 @@
   .inbox-bottom-note > span { min-width: 0; }
   .inbox-bottom-note .text-button { min-height: 44px; margin-left: 22px; font-size: 11px; }
 }
+
+/* Connected sources (simulated multi-provider intake) */
+.sand { background: #f6f0e1; border-color: #ece3cc; color: #8a7240; }
+.slate { background: #ebeef2; border-color: #dde2e8; color: #56657a; }
+.provider-strip { margin-bottom: 22px; }
+.provider-strip-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; font-size: 10px; color: var(--inbox-muted); }
+.provider-strip-heading .eyebrow { font-size: 9px; letter-spacing: 1.2px; }
+.provider-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.provider-chip { display: inline-flex; align-items: center; gap: 9px; padding: 8px 12px 8px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); text-align: left; min-height: 44px; }
+.provider-chip:hover { border-color: #c9d6bc; background: #fafcf7; }
+.provider-chip.active { border-color: #708b5a; background: #f0f5e9; box-shadow: inset 0 0 0 1px #708b5a; }
+.provider-chip strong { display: block; font-size: 11px; font-weight: 600; color: #44563b; white-space: nowrap; }
+.provider-chip small { display: flex; align-items: center; gap: 5px; font-size: 9px; color: var(--inbox-muted); margin-top: 1px; white-space: nowrap; }
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #6aa56f; flex-shrink: 0; }
+.provider-mark { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: -.2px; color: #fff; flex-shrink: 0; }
+.signal-row-source .provider-mark, .signal-source-meta .provider-mark { width: 16px; height: 16px; border-radius: 4px; font-size: 8px; }
+.provider-all { background: #e9eee3; color: #536b45; font-size: 14px; }
+.provider-slack { background: #4a154b; }
+.provider-jira { background: #1868db; }
+.provider-zendesk { background: #17494d; }
+.provider-intercom { background: #286efa; }
+.provider-gmail { background: #c5221f; }
+.provider-linear { background: #5e6ad2; }
+.provider-github { background: #24292f; }
+.provider-hubspot { background: #ff5c35; }
+.provider-teams { background: #4b53bc; }
+.provider-salesforce { background: #0b827c; }
+.signal-row-source { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 10px; color: #536b45; min-width: 0; }
+.signal-row-source code { font-size: 9px; color: var(--inbox-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.signal-row-source + h2 { margin-top: 6px; }
+.signal-source-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 4px 0 12px; padding: 13px 15px; border: 1px solid #e3e9da; border-radius: 8px; background: #fbfcf9; }
+.signal-source-meta dt { font-size: 9px; letter-spacing: .6px; text-transform: uppercase; color: var(--inbox-muted); }
+.signal-source-meta dd { display: flex; align-items: center; gap: 6px; margin: 3px 0 0; font-size: 11px; color: #4d6340; overflow-wrap: anywhere; }
+.signal-source-meta code { font-size: 10px; }
+@media (max-width: 640px) {
+  .provider-strip-heading { flex-direction: column; gap: 3px; }
+  .provider-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+  .signal-source-meta { grid-template-columns: minmax(0, 1fr); }
+}
